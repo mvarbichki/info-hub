@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Раздели – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="departments" %}
+{% include "dashboard/_messages.html" %}
+
+<section class="panel">
+    <h2>Нов раздел</h2>
+    <p class="muted">Появява се веднага в менюто и на началната страница. После му добавете потребител в „Потребители“ и, ако трябва, категории.</p>
+    <form method="post">
+        {% csrf_token %}
+        {% include "dashboard/_department_fields.html" %}
+        <button type="submit" class="button-primary">Създай раздел</button>
+    </form>
+</section>
+
+<section class="panel">
+    <h2>Раздели</h2>
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Ред</th><th>Раздел</th><th>Адрес</th><th>Публикации</th><th>Категории</th><th>Потребители</th><th></th></tr></thead>
+        <tbody>
+        {% for d in departments %}
+        <tr>
+            <td class="nowrap">
+                <form method="post" action="{% url 'dashboard:move_department' d.pk %}" class="order-buttons">{% csrf_token %}
+                    <button type="submit" name="direction" value="up" class="link-button" title="Нагоре в менюто"{% if forloop.first %} disabled{% endif %}>↑</button>
+                    <button type="submit" name="direction" value="down" class="link-button" title="Надолу в менюто"{% if forloop.last %} disabled{% endif %}>↓</button>
+                </form>
+            </td>
+            <td class="guide-table__title"><span class="swatch dept--{{ d.color }}" aria-hidden="true"></span>{{ d.title }}</td>
+            <td><a href="{{ d.url }}" target="_blank">/{{ d.slug }}/</a></td>
+            <td class="nowrap">{{ d.active_count }} на сайта{% if d.inactive_count %} · {{ d.inactive_count }} архивирани{% endif %}{% if d.draft_count %} · {{ d.draft_count }} чернови{% endif %}</td>
+            <td>{{ d.category_count }}</td>
+            <td>{% if d.usernames %}{{ d.usernames|join:", " }}{% else %}<a href="{% url 'dashboard:users' %}">+ добави</a>{% endif %}</td>
+            <td class="actions">
+                <a href="{% url 'dashboard:edit_department' d.pk %}">Редактирай</a>
+                {% if d.active_count or d.inactive_count or d.draft_count or d.category_count or d.usernames %}
+                <span class="muted" title="Първо изтрийте публикациите и категориите и преместете потребителите">Изтрий</span>
+                {% else %}
+                <form method="post" action="{% url 'dashboard:delete_department' d.pk %}" data-confirm="Да изтрия ли раздела „{{ d.title }}“?">{% csrf_token %}<button type="submit" class="link-button link-button--danger">Изтрий</button></form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <p class="muted small">↑ ↓ подреждат разделите в менюто и на началната страница. Раздел може да се изтрие само когато е празен: без публикации, категории и потребители.</p>
+</section>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}

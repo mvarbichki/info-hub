@@ -1,0 +1,8 @@
+{
+  "name": "infohub-browser-tests",
+  "private": true,
+  "description": "Runs the site's JavaScript in jsdom. Started by tests/test_js.py (python manage.py test).",
+  "dependencies": {
+    "jsdom": "24.1.3"
+  }
+}

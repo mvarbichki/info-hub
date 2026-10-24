@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Редакция – {{ department.title }}{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs"><a href="{% url 'dashboard:index' %}">Управление</a><span aria-hidden="true">›</span><a href="{% url 'dashboard:departments' %}">Раздели</a><span aria-hidden="true">›</span><span>{{ department.title }}</span></nav>
+{% include "dashboard/_messages.html" %}
+
+<section class="panel">
+    <h1 class="panel__title">{{ department.title }}</h1>
+    <p class="muted">Адрес: <a href="{{ department.url }}" target="_blank">/{{ department.slug }}/</a> (не се променя, за да работят старите връзки)</p>
+    <form method="post">
+        {% csrf_token %}
+        {% include "dashboard/_department_fields.html" %}
+        <div class="form-actions">
+            <button type="submit" class="button-primary">Запази</button>
+            <a href="{% url 'dashboard:departments' %}">Отказ</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

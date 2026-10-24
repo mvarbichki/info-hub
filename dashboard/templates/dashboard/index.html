@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static audience_tags %}
+
+{% block title %}Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="index" %}
+{% include "dashboard/_messages.html" %}
+
+<section class="panel">
+    <div class="panel__head">
+        <h2>Публикации</h2>
+        <a href="{% url 'dashboard:new' %}" class="button-primary">+ Нова публикация</a>
+    </div>
+    <div class="panel__head">
+        <form method="get" class="list-filter">
+            {% if departments|length > 1 %}
+            <select name="department" onchange="this.form.submit()" aria-label="Раздел">
+                <option value="">Всички раздели</option>
+                {% for d in departments %}<option value="{{ d.pk }}" {% if department_id == d.pk|stringformat:"d" %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
+            </select>
+            {% endif %}
+            <select name="status" onchange="this.form.submit()" aria-label="Статус">
+                <option value="">Всички</option>
+                <option value="active" {% if status == "active" %}selected{% endif %}>Само на сайта</option>
+                <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Само архивирани</option>
+                <option value="draft" {% if status == "draft" %}selected{% endif %}>Само чернови</option>
+            </select>
+            <input type="search" name="q" value="{{ query }}" placeholder="Търси по заглавие" aria-label="Търси по заглавие">
+        </form>
+    </div>
+    <p class="inactive-counts">
+        Архивирани (не се виждат на сайта, напр. кампания до следващия сезон), максимум {{ inactive_limit }} на раздел:
+        {% for d, count, full in inactive %}<span class="inactive-count{% if full %} is-full{% endif %}">{{ d.title }}: <b>{{ count }} / {{ inactive_limit }}</b></span>{% endfor %}
+    </p>
+
+    {% if guides %}
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Заглавие</th><th>Място</th><th>Вижда се от</th><th>Вид</th><th>Обновено</th><th>Статус</th><th></th></tr></thead>
+        <tbody>
+        {% for guide in guides %}
+        <tr class="{% if not guide.live %}is-hidden{% endif %}">
+            <td class="guide-table__title">
+                {% if guide.live %}<a href="{{ guide.url }}" target="_blank">{{ guide.draft_title }}</a>{% elif guide.is_draft %}<a href="{% url 'dashboard:preview' guide.pk %}" target="_blank" title="Преглед">{{ guide.draft_title }}</a>{% else %}{{ guide.draft_title }}{% endif %}
+                {% if guide.is_pinned %}<span class="badge badge--campaign">Важно</span>{% endif %}
+            </td>
+            <td>{{ guide.department.title }}{% with parent=guide.get_parent %}{% if parent.pk != guide.department.pk %} › {{ parent.title }}{% endif %}{% endwith %}</td>
+            <td class="audience-cell">{{ guide|audience_summary }}</td>
+            <td>{{ guide.get_kind_display }}</td>
+            <td class="nowrap">{{ guide.latest_revision_created_at|date:"j.m.Y H:i" }}</td>
+            <td>
+                {% if guide.is_draft %}<span class="status status--pending">Чернова</span>
+                {% elif guide.live %}<span class="status status--live">На сайта</span>{% if guide.has_unpublished_changes %}<br><a href="{% url 'dashboard:preview' guide.pk %}" target="_blank" class="small">има чернова ↗</a>{% endif %}
+                {% else %}<span class="status status--hidden">Архивирана</span>{% endif %}
+                {% if guide.needs_ack and not guide.is_draft %}<br><a href="{% url 'dashboard:reads' guide.pk %}" class="small nowrap">Прочетох: {{ guide.acks }} / {{ guide.ack_total }}</a>{% endif %}
+            </td>
+            <td class="actions">
+                <a href="{% url 'dashboard:update' guide.pk %}">Редактирай</a>
+                {% if not guide.is_draft %}<a href="{% url 'dashboard:reads' guide.pk %}">Прочитания</a>{% endif %}
+                <form method="post" action="{% url 'dashboard:toggle' guide.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="link-button">{% if guide.live %}Архивирай{% elif guide.is_draft %}Публикувай{% else %}Върни на сайта{% endif %}</button></form>
+                <form method="post" action="{% url 'dashboard:delete' guide.pk %}" data-confirm="Да изтрия ли „{{ guide.draft_title }}“ окончателно?">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="link-button link-button--danger">Изтрий</button></form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% include "includes/pagination.html" with items=guides %}
+    {% else %}
+    <p class="muted">Няма публикации. Натиснете „+ Нова публикация“, за да напишете първата.</p>
+    {% endif %}
+</section>
+
+{% if storage %}
+<details class="panel storage"{% if storage.low %} open{% endif %}>
+    <summary>
+        Място на сървъра: <b>{{ storage.disk_free|filesizeformat }}</b> свободни ({{ storage.free_percent }}%)
+        {% if storage.low %}<span class="status status--pending">Мястото свършва</span>{% endif %}
+    </summary>
+    {% if storage.low %}<p class="flash flash--warning">Остават под 15% свободно място. Изтрийте стари публикации с видео или увеличете мястото на хостинга.</p>{% endif %}
+    <table class="guide-table">
+        <tbody>
+        {% for name, size in storage.rows %}<tr><td>{{ name }}</td><td class="nowrap">{{ size|filesizeformat }}</td></tr>{% endfor %}
+        <tr><td><b>Общо качени файлове</b></td><td class="nowrap"><b>{{ storage.total|filesizeformat }}</b></td></tr>
+        <tr><td>Диск (общо)</td><td class="nowrap">{{ storage.disk_total|filesizeformat }}</td></tr>
+        </tbody>
+    </table>
+    <p class="muted small">Неизползваните файлове се чистят автоматично всяка нощ. Вижда се само от супер администратора.</p>
+</details>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}

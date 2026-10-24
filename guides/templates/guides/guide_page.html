@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags audience_tags %}
+
+{% block content %}
+{% include "includes/breadcrumbs.html" %}
+
+<article class="guide">
+    <header class="guide__header">
+        <div class="guide-card__meta">
+            <span class="badge badge--{{ page.kind }}">{{ page.get_kind_display }}</span>
+            {% fresh_badge page as fresh %}{% if fresh %}<span class="badge badge--{{ fresh.0 }}">{{ fresh.1 }}</span>{% endif %}
+            {% audience_badge page as for_whom %}{% if for_whom %}<span class="badge badge--audience{% if for_whom == "Само за управители" %} badge--managers{% endif %}">{{ for_whom }}</span>{% endif %}
+        </div>
+        <h1>{{ page.title }}</h1>
+        {% if page.summary %}<p class="guide__summary">{{ page.summary }}</p>{% endif %}
+        {% if page.last_published_at %}
+        <p class="guide__date">Последна промяна: <time datetime="{{ page.last_published_at|date:'c' }}">{{ page.last_published_at|date:"j E Y, H:i" }}</time></p>
+        {% endif %}
+        {% if request.is_preview %}<p class="flash flash--warning">Преглед: така ще изглежда публикацията. Обектите още не виждат тези промени.</p>{% endif %}
+        {% if page.needs_ack and not is_editor and not my_ack %}<p class="ack-hint">Прочетете публикацията и потвърдете с бутона <b>„Прочетох“</b> най-долу.</p>{% endif %}
+    </header>
+
+    {% if headings|length > 1 %}
+    <nav class="toc" aria-label="Съдържание">
+        <h2>Съдържание</h2>
+        <ol>{% for id, title in headings %}<li><a href="#h-{{ id }}">{{ title }}</a></li>{% endfor %}</ol>
+    </nav>
+    {% endif %}
+
+    <div class="guide__body">
+        {% for block in page.body %}
+            {% if block.block_type == "heading" %}
+                <h2 id="h-{{ block.id }}">{{ block.value }}</h2>
+            {% elif block.block_type == "text" %}
+                <div class="richtext">{% include_block block %}</div>
+            {% else %}
+                {% include_block block %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    {% if page.needs_ack %}
+    <section class="ack" id="ack">
+        {% if is_editor %}
+        <p>Обектите потвърждават тази публикация с „Прочетох“.{% if can_edit and not request.is_preview %} <a href="{% url 'dashboard:reads' page.pk %}">Кой е прочел и потвърдил</a>{% endif %}</p>
+        {% elif my_ack %}
+        <p class="ack__done">✓ Потвърдихте, че сте прочели: {{ my_ack|date:"j E Y, H:i" }}</p>
+        {% else %}
+        <form method="post" action="{% url 'guide_ack' page.pk %}" class="ack__form">
+            {% csrf_token %}
+            <span>Прочетохте ли публикацията?</span>
+            <button type="submit" class="button-primary">Прочетох</button>
+        </form>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {% if not is_editor %}
+    <section class="feedback" id="feedback" data-feedback="{{ page.pk }}">
+        {% if my_vote is not None %}
+        <p class="feedback__thanks">Помогна ли ви тази публикация? Отговорихте „{{ my_vote|yesno:"Да,Не" }}“. Благодарим!</p>
+        {% elif request.GET.thanks %}
+        <p class="feedback__thanks">Благодарим за отговора!</p>
+        {% else %}
+        <form method="post" action="{% url 'guide_feedback' page.pk %}" class="feedback__form">
+            {% csrf_token %}
+            <span class="feedback__question">Помогна ли ви тази публикация?</span>
+            <button type="submit" name="helpful" value="yes" class="button-secondary">Да</button>
+            <button type="submit" name="helpful" value="no" class="button-secondary">Не</button>
+        </form>
+        <p class="feedback__thanks" hidden>Благодарим за отговора!</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <footer class="guide__footer">
+        <button type="button" class="button-secondary" onclick="window.print()">Печат</button>
+        {% with department=page.department %}{% if department %}<a href="{% pageurl department %}">← Всички публикации на {{ department.title }}</a>{% endif %}{% endwith %}
+    </footer>
+</article>
+{% endblock %}

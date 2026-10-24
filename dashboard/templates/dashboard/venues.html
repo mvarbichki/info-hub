@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Обекти – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="venues" %}
+{% include "dashboard/_messages.html" %}
+
+<section class="panel">
+    <h2>Нов обект</h2>
+    <p class="muted">Тук са само обектите. Потребителите им (служители и управител) се създават в <a href="{% url 'dashboard:users' %}">Потребители</a>.</p>
+    <form method="post" class="inline-form venue-form" autocomplete="off">
+        {% csrf_token %}
+        <label class="field field--grow">{{ form.name.label }}<input type="text" name="name" value="{{ form.name.value|default:'' }}" maxlength="100" required placeholder="напр. София – Младост"></label>
+        <button type="submit" class="button-primary">Създай обекта</button>
+    </form>
+    <p class="muted small">{{ form.name.help_text }}</p>
+    {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+</section>
+
+<section class="panel">
+    <h2>Обекти ({{ venues|length }})</h2>
+    {% if venues %}
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Обект</th><th>Потребители</th><th></th></tr></thead>
+        <tbody>
+        {% for venue in venues %}
+        <tr class="{% if not venue.is_active %}is-hidden{% endif %}">
+            <td class="guide-table__title">
+                {{ venue.name }}
+                {% if venue.is_training %}<span class="badge badge--news">Обучение – не се брои в статистиката</span>{% endif %}
+                {% if not venue.is_active %}<span class="status status--hidden">Спрян</span>{% endif %}
+            </td>
+            <td>
+                {% for a in venue.account_list %}
+                <span class="venue-user">{{ a.user.username }} <span class="muted small">({% if a.role == "manager" %}управител{% else %}служители{% endif %}{% if not a.user.has_usable_password %}, няма парола{% elif not a.user.is_active %}, спрян{% endif %})</span></span>{% if not forloop.last %}<br>{% endif %}
+                {% empty %}
+                <span class="status status--pending">Няма потребители</span>
+                {% endfor %}
+                <br><a href="{% url 'dashboard:users' %}?new_role=staff&amp;new_venue={{ venue.pk }}#new-user" class="small">+ Добави потребител</a>
+                {% if venue.account_list %} · <a href="{% url 'dashboard:users' %}?venue={{ venue.pk }}" class="small">Пароли и промени</a>{% endif %}
+            </td>
+            <td class="actions">
+                <a href="{% url 'dashboard:edit_venue' venue.pk %}">Преименувай</a>
+                {% if venue.account_list %}<form method="post" action="{% url 'dashboard:venue_password_sheet' venue.pk %}" data-confirm="Нови пароли за {{ venue.account_list|length }} потребителя на „{{ venue.name }}“? Старите спират да работят веднага и компютрите на обекта излизат. Новите ще се покажат само веднъж – за печат.">{% csrf_token %}<button type="submit" class="link-button">Нови пароли (печат)</button></form>{% endif %}
+                <form method="post" action="{% url 'dashboard:toggle_venue' venue.pk %}" data-confirm="{% if venue.is_active %}Да спра ли „{{ venue.name }}“? Потребителите му излизат и не могат да влизат, докато не го пуснете отново.{% else %}Да пусна ли отново „{{ venue.name }}“?{% endif %}">{% csrf_token %}<button type="submit" class="link-button">{% if venue.is_active %}Спри{% else %}Пусни{% endif %}</button></form>
+                {% if not venue.is_training %}
+                <form method="post" action="{% url 'dashboard:delete_venue' venue.pk %}" data-confirm="Да изтрия ли „{{ venue.name }}“{% if venue.account_list %} и потребителите му ({{ venue.account_list|length }}){% endif %}?{% if venue.only_here %} {{ venue.only_here }} публикации са само за този обект и вече няма да се виждат от никой обект.{% endif %} Ако обектът само временно не работи, по-добре го спрете.">{% csrf_token %}<button type="submit" class="link-button link-button--danger">Изтрий</button></form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <p class="muted small">„Спри“ спира всички потребители на обекта (компютрите му излизат); „Пусни“ ги пуска със същите пароли.
+    „Нови пароли (печат)“ дава на всеки потребител на обекта случайна парола и ги показва веднъж на лист за печат (по обект на страница).</p>
+    <form method="post" action="{% url 'dashboard:password_sheet' %}" class="sheet-all" data-confirm="Нови пароли за ВСИЧКИ работещи обекти (без „Обучение“)? Старите спират да работят веднага и всички компютри на обектите излизат. Новите ще се покажат само веднъж – отпечатайте ги.">{% csrf_token %}<button type="submit" class="button-secondary">Нови пароли за всички обекти и лист за печат</button></form>
+    {% else %}
+    <p class="muted">Още няма обекти.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}

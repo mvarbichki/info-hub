@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Вход{% endblock %}
+{% block header_search %}{% endblock %}
+{% block nav %}{% endblock %}
+
+{% block content %}
+<section class="panel panel--narrow">
+    <h1 class="panel__title">Вход</h1>
+    <p class="muted">Влезте с потребителското име и паролата, които сте получили.</p>
+    {% if request.user.is_authenticated %}
+    <div class="flash flash--info">Влезли сте като <b>{{ request.user.username }}</b>, който няма достъп до тази страница. Влезте с друг потребител.</div>
+    {% else %}
+    {% include "dashboard/_messages.html" %}
+    {% endif %}
+    {% if from_editor and not form.errors %}
+    <div class="flash flash--warning">Не сте влезли (или сесията е изтекла). <b>Ако сте писали публикация, тя не е запазена.</b>
+        Натиснете <b>Назад</b> в браузъра – текстът ви е още там. Влезте в нов таб (<b>Ctrl+T</b>), после се върнете и натиснете бутона за запазване отново.</div>
+    {% endif %}
+    {% if locked %}
+    <div class="flash flash--error">Твърде много неуспешни опити. Опитайте отново след 15 минути.</div>
+    {% elif form.errors %}
+    <div class="flash flash--error">Грешно потребителско име или парола.</div>
+    {% endif %}
+    <form method="post" action="{% url 'login' %}" class="login-form">
+        {% csrf_token %}
+        <label>Потребител<input type="text" name="username" value="{{ form.username.value|default:'' }}" autofocus autocomplete="username" autocapitalize="none" required></label>
+        <label>Парола<input type="password" name="password" autocomplete="current-password" required></label>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="button-primary">Вход</button>
+    </form>
+    {% if request.user.is_authenticated %}
+    <p class="panel__back"><a href="/">← Назад към сайта</a></p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% if value.document %}
+<p>
+    <a class="file-link" href="{{ value.document.url }}" download>
+        <span>{{ value.title|default:value.document.title }}</span>
+        <small>{{ value.document.file_extension|upper }}{% if value.document.file_size %} · {{ value.document.file_size|filesizeformat }}{% endif %}</small>
+    </a>
+</p>
+{% endif %}

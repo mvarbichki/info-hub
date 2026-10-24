@@ -1,0 +1,53 @@
+# Django project
+/media/
+/static/
+*.sqlite3
+
+# Python and others
+__pycache__
+*.pyc
+.DS_Store
+*.swp
+/venv/
+/tmp/
+/.vagrant/
+/Vagrantfile.local
+**/node_modules/
+/npm-debug.log
+/.idea/
+.vscode
+coverage
+.python-version
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Local secrets and virtualenv
+.env
+.venv/
+.git/
+
+# Exports with password hashes, logs
+accounts.json
+*.log
+.coverage
+CLAUDE.md
+branding/
+docs/
+site.json

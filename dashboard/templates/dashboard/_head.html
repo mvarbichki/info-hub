@@ -1,0 +1,22 @@
+<div class="dash-head">
+    <div>
+        <h1>Управление</h1>
+        {% if managed_title %}<p class="dash-head__sub">Вие управлявате: <b>{{ managed_title }}</b></p>{% endif %}
+    </div>
+    <div class="dash-head__links">
+        <a href="/" target="_blank">Отвори сайта ↗</a>
+        {% if request.user.is_superuser %}<a href="/admin/">Разширени настройки</a>{% endif %}
+        <a href="{% url 'dashboard:password' %}">Смени парола</a>
+        <form method="post" action="{% url 'dashboard:logout' %}">{% csrf_token %}<button type="submit" class="link-button">Изход ({{ request.user.username }})</button></form>
+    </div>
+</div>
+<nav class="dash-tabs" aria-label="Управление">
+    <a href="{% url 'dashboard:index' %}"{% if active == "index" %} aria-current="page"{% endif %}>Публикации</a>
+    <a href="{% url 'dashboard:categories' %}"{% if active == "categories" %} aria-current="page"{% endif %}>Категории</a>
+    <a href="{% url 'dashboard:stats' %}"{% if active == "stats" %} aria-current="page"{% endif %}>Статистика</a>
+    {% if request.user.is_superuser %}
+    <a href="{% url 'dashboard:departments' %}"{% if active == "departments" %} aria-current="page"{% endif %}>Раздели</a>
+    <a href="{% url 'dashboard:venues' %}"{% if active == "venues" %} aria-current="page"{% endif %}>Обекти</a>
+    <a href="{% url 'dashboard:users' %}"{% if active == "users" %} aria-current="page"{% endif %}>Потребители</a>
+    {% endif %}
+</nav>

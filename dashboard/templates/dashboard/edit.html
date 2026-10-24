@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if guide %}Редакция – {{ guide.title }}{% else %}Нова публикация{% endif %}{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'vendor/quill/quill.snow.css' %}">{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs"><a href="{% url 'dashboard:index' %}">Управление</a><span aria-hidden="true">›</span><span>{% if guide %}Редакция{% else %}Нова публикация{% endif %}</span></nav>
+{% include "dashboard/_messages.html" %}
+
+<form method="post" class="post-form">
+    {% csrf_token %}
+    <section class="panel">
+        <div class="panel__head">
+            <h1 class="panel__title">{% if guide %}Редакция{% else %}Нова публикация{% endif %}</h1>
+            <span class="panel__links">
+            {% if guide.is_draft %}<span class="status status--pending">Чернова: не се вижда на сайта</span>
+            {% elif guide.live %}<a href="{{ guide.url }}" target="_blank">Отвори на сайта ↗</a>
+            {% elif guide %}<span class="status status--hidden">Архивирана: не се вижда на сайта</span>{% endif %}
+            {% if has_draft %}<a href="{% url 'dashboard:preview' guide.pk %}" target="_blank">Преглед на черновата ↗</a>{% endif %}
+            </span>
+        </div>
+        {% if form.errors %}<div class="flash flash--error" role="alert">Публикацията <b>не е запазена</b>. Поправете отбелязаното в червено по-долу и натиснете бутона отново.{% if form.non_field_errors %} {{ form.non_field_errors|join:" " }}{% endif %}</div>{% endif %}
+
+        <div class="field">
+            <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+            <input type="text" name="title" id="{{ form.title.id_for_label }}" class="input-title" value="{{ form.title.value|default:'' }}" maxlength="255" required placeholder="Задайте кратко и информативно заглавие">
+            {% for error in form.title.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field field--top">
+            <label for="{{ form.summary.id_for_label }}">{{ form.summary.label }} <span class="muted">– по желание</span></label>
+            <textarea name="summary" id="{{ form.summary.id_for_label }}" rows="2" maxlength="300" placeholder="{{ form.summary.help_text }}">{{ form.summary.value|default:'' }}</textarea>
+            {% for error in form.summary.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+
+        <div class="form-grid">
+            <div class="field">
+                <label for="{{ form.place.id_for_label }}">{{ form.place.label }}</label>
+                {{ form.place }}
+                {% for error in form.place.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="field">
+                <span class="field__label">{{ form.kind.label }}</span>
+                <div class="radio-pills">
+                    {% for radio in form.kind %}<label>{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}
+                </div>
+                {% for error in form.kind.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            {% if form.is_pinned %}
+            <div class="field field--wide">
+                <label class="checkbox">{{ form.is_pinned }} {{ form.is_pinned.label }}</label>
+                <label class="inline-date">{{ form.pinned_until.label }} {{ form.pinned_until }} <span class="muted">(по желание)</span></label>
+                {% for error in form.pinned_until.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Съдържание</h2>
+        <noscript><p class="flash flash--error">Редакторът работи само с включен JavaScript в браузъра.</p></noscript>
+        {% for error in form.body.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        <div class="editor" data-editor>
+            <p class="editor__empty" data-empty>Още няма съдържание. За ръководство започнете със „Стъпка“, за новина или кампания – с „Текст“.</p>
+            <div class="editor__blocks" data-blocks></div>
+            <div class="editor__add">
+                <span class="editor__add-label">Добави:</span>
+                <button type="button" class="button-secondary button-small" data-add="step">Стъпка</button>
+                <button type="button" class="button-secondary button-small" data-add="text">Текст</button>
+                <button type="button" class="button-secondary button-small" data-add="heading">Подзаглавие</button>
+                <button type="button" class="button-secondary button-small" data-add="image">Снимка</button>
+                <button type="button" class="button-secondary button-small" data-add="video">Видео</button>
+                <button type="button" class="button-secondary button-small" data-add="note">Бележка</button>
+                <button type="button" class="button-secondary button-small" data-add="file">Файл</button>
+            </div>
+            <p class="muted small editor__hint">
+                Новият блок идва под избрания (или най-отдолу). Подреждане – със стрелките ↑ ↓.
+                Снимки: бутон, плъзгане или поставяне с <b>Ctrl+V</b> (напр. екранна снимка от <b>Win+Shift+S</b>).
+                Максимум: снимка {{ editor_config.limits.image }} MB, видео {{ editor_config.limits.video }} MB (MP4), файл {{ editor_config.limits.file }} MB.
+            </p>
+        </div>
+        {{ form.body }}
+    </section>
+
+    <section class="panel audience" data-audience>
+        <h2>Кой да я вижда</h2>
+        {% for error in audience_errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        <label class="checkbox audience__choice"><input type="checkbox" name="all_venues" data-all-venues{% if form.all_venues.value %} checked{% endif %}> <span><b>Всички обекти</b> – служителите и управителите на всички обекти, също и на обекти, добавени по-късно</span></label>
+        <div class="audience__pick" data-audience-pick>
+            <p class="muted small">Или изберете обекти: <b>служителите</b> им (техният управител я вижда също) или <b>само управителя</b> им. Не двете заедно: за служители на един обект и управител на друг направете две публикации.</p>
+            {% if venue_rows %}
+            <div class="audience__tools">
+                <input type="search" placeholder="Търси обект…" aria-label="Търси обект" data-audience-search>
+                <span class="muted small" data-audience-count></span>
+            </div>
+            <div class="table-wrap">
+            <table class="guide-table audience-table">
+                <thead><tr>
+                    <th>Обект</th>
+                    <th><span>Служители <span class="muted small">(и управителят)</span></span> <button type="button" class="link-button small" data-column="staff">всички</button></th>
+                    <th><span>Само управителят</span> <button type="button" class="link-button small" data-column="manager">всички</button></th>
+                </tr></thead>
+                <tbody>
+                {% for row in venue_rows %}
+                <tr data-venue-row data-name="{{ row.venue.name|lower }}">
+                    <td><span data-venue-name>{{ row.venue.name }}</span>{% if row.venue.is_training and "обучение" not in row.venue.name.lower %} <span class="muted small">(обучение)</span>{% endif %}{% if not row.venue.is_active %} <span class="status status--hidden">спрян</span>{% endif %}</td>
+                    <td><label class="checkbox"><input type="checkbox" name="staff_venues" value="{{ row.venue.pk }}" data-staff{% if row.staff %} checked{% endif %} aria-label="{{ row.venue.name }} – служители"></label></td>
+                    <td><label class="checkbox"><input type="checkbox" name="manager_venues" value="{{ row.venue.pk }}" data-manager{% if row.manager %} checked{% endif %} aria-label="{{ row.venue.name }} – само управителят"></label></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <p class="flash flash--warning">Още няма обекти. Супер администраторът ги добавя в „Обекти“.</p>
+            {% endif %}
+        </div>
+        <p class="audience__summary" data-audience-summary role="status" aria-live="polite"></p>
+        <label class="checkbox audience__ack"><input type="checkbox" name="needs_ack"{% if form.needs_ack.value %} checked{% endif %}> <span><b>Искай „Прочетох“</b> – обектите потвърждават с бутон, че са прочели (за правила, срокове, важни промени). Кой е потвърдил: „Прочитания“ в списъка.</span></label>
+    </section>
+
+    <div class="form-actions form-actions--sticky">
+        {% if guide and not guide.live and not guide.is_draft %}
+        <button type="submit" class="button-primary" name="action" value="publish" data-submit>Запази</button>
+        {% else %}
+        <button type="submit" class="button-primary" name="action" value="publish" data-submit>{% if guide.live %}Публикувай промените{% else %}Публикувай{% endif %}</button>
+        <button type="submit" class="button-secondary" name="action" value="draft">Запази като чернова</button>
+        {% endif %}
+        <a href="{% url 'dashboard:index' %}">Отказ</a>
+        <span class="muted small" data-status role="status" aria-live="polite">{% if guide and not guide.live and not guide.is_draft %}Ще остане архивирана. Върнете я на сайта от списъка.{% elif has_draft and guide.live %}Има запазена чернова: обектите виждат публикуваната версия, докато не натиснете „Публикувай промените“.{% endif %}</span>
+    </div>
+</form>
+{{ editor_config|json_script:"editor-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/quill/quill.js' %}"></script>
+<script src="{% static 'js/editor.js' %}"></script>
+<script src="{% static 'js/audience.js' %}"></script>
+{% endblock %}

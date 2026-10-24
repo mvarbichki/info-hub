@@ -1,0 +1,10 @@
+{% load wagtailimages_tags %}
+{% if value.image %}
+{% image value.image width-1000 as img %}{% image value.image width-2000 as full %}
+<figure class="figure">
+    <a href="{{ full.url }}" class="zoomable" data-caption="{{ value.caption }}">
+        <img src="{{ img.url }}" width="{{ img.width }}" height="{{ img.height }}" alt="{{ value.caption|default:value.image.title }}" loading="lazy">
+    </a>
+    {% if value.caption %}<figcaption>{{ value.caption }}</figcaption>{% endif %}
+</figure>
+{% endif %}

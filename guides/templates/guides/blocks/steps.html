@@ -1,0 +1,19 @@
+{% load wagtailcore_tags wagtailimages_tags %}
+<ol class="steps">
+    {% for step in value %}
+    <li class="step">
+        {% if step.title %}<h3 class="step__title">{{ step.title }}</h3>{% endif %}
+        {% if step.text %}<div class="richtext">{{ step.text|richtext }}</div>{% endif %}
+        {% if step.images %}
+        <div class="step__images{% if step.images|length > 1 %} step__images--grid{% endif %}">
+            {% for picture in step.images %}{% if picture %}
+            {% image picture width-1000 as img %}{% image picture width-2000 as full %}
+            <a href="{{ full.url }}" class="zoomable step__image" data-caption="{{ step.title }}">
+                <img src="{{ img.url }}" width="{{ img.width }}" height="{{ img.height }}" alt="{{ step.title|default:picture.title }}" loading="lazy">
+            </a>
+            {% endif %}{% endfor %}
+        </div>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ol>

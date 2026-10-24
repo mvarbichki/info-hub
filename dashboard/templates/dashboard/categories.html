@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Категории – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="categories" %}
+{% include "dashboard/_messages.html" %}
+
+<section class="panel">
+    <h2>Нова категория</h2>
+    <p class="muted">Категориите групират публикациите в раздела, напр. „Принтери“ или „Каси“. Избират се в полето „Къде да се публикува“.</p>
+    <form method="post" class="inline-form">
+        {% csrf_token %}
+        {% if departments|length > 1 %}
+        <label class="field">{{ form.department.label }}{{ form.department }}</label>
+        {% else %}
+        <input type="hidden" name="department" value="{{ departments.0.pk }}">
+        {% endif %}
+        <label class="field field--grow">{{ form.title.label }}<input type="text" name="title" value="{{ form.title.value|default:'' }}" maxlength="255" required></label>
+        <button type="submit" class="button-primary">Добави</button>
+    </form>
+    {% for error in form.title.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+</section>
+
+{% for department, items in sections %}
+<section class="panel">
+    <h2>{{ department.title }}</h2>
+    {% if items %}
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Име</th><th>Публикации</th><th>Статус</th><th></th></tr></thead>
+        <tbody>
+        {% for category in items %}
+        <tr class="{% if not category.live %}is-hidden{% endif %}">
+            <td>
+                <form method="post" action="{% url 'dashboard:rename_category' category.pk %}" class="rename-form">
+                    {% csrf_token %}
+                    <input type="text" name="title" value="{{ category.title }}" maxlength="255" required aria-label="Име на категорията">
+                    <button type="submit" class="link-button">Преименувай</button>
+                </form>
+            </td>
+            <td>{{ category.guide_count }}</td>
+            <td>{% if category.live %}<span class="status status--live">Видима</span>{% else %}<span class="status status--hidden">Чернова – не се вижда</span>{% endif %}</td>
+            <td class="actions">
+                {% if category.live %}<a href="{{ category.url }}" target="_blank">Отвори</a>
+                {% else %}<form method="post" action="{% url 'dashboard:publish_category' category.pk %}">{% csrf_token %}<button type="submit" class="link-button">Покажи на сайта</button></form>{% endif %}
+                {% if category.guide_count %}
+                <span class="muted" title="Първо преместете или изтрийте публикациите в нея">Изтрий</span>
+                {% else %}
+                <form method="post" action="{% url 'dashboard:delete_category' category.pk %}" data-confirm="Да изтрия ли категорията „{{ category.title }}“?">{% csrf_token %}<button type="submit" class="link-button link-button--danger">Изтрий</button></form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <p class="muted small">Категория с публикации не може да се изтрие. Първо ги преместете (Редактирай → „Къде да се публикува“) или ги изтрийте.</p>
+    {% else %}
+    <p class="muted">Няма категории. Публикациите се показват направо в раздела.</p>
+    {% endif %}
+</section>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}

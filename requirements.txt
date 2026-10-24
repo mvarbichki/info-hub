@@ -1,0 +1,7 @@
+Django>=6.1.2,<6.2
+wagtail>=7.4.4,<7.5
+# Minimums below are security fixes (2026-10-23): Pillow < 13 has 36 known bugs in image decoding.
+pillow>=13
+certifi>=2026.10.19
+psycopg[binary]>=3.2,<4
+gunicorn>=23,<26

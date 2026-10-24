@@ -1,0 +1,3 @@
+# For hosting with MariaDB/MySQL (e.g. SuperHosting cPanel): pip install -r requirements-mariadb.txt
+-r requirements.txt
+mysqlclient>=2.2.1

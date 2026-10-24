@@ -1,0 +1,13 @@
+{% if value.video %}
+<figure class="figure">
+    {% if is_video %}
+    <video controls preload="metadata" playsinline>
+        <source src="{{ value.video.url }}">
+        Вашият браузър не може да възпроизведе видеото. <a href="{{ value.video.url }}">Изтеглете го</a>.
+    </video>
+    {% else %}
+    <a class="file-link" href="{{ value.video.url }}">{{ value.video.title }}</a>
+    {% endif %}
+    {% if value.caption %}<figcaption>{{ value.caption }}</figcaption>{% endif %}
+</figure>
+{% endif %}

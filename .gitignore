@@ -1,0 +1,27 @@
+# Python and tools
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+.coverage
+tests/js/node_modules/
+
+# Data of a running site: database (and copies of it), uploads, collected static files
+*.sqlite3
+/media/
+/static/
+
+# Secrets, local settings, logs
+.env
+infohub/settings/local.py
+*.log
+
+# Exports with password hashes (export_site; old accounts-only export)
+site.json
+accounts.json
+
+# Kept on this PC only, never in the public repository:
+# project notes with account details, and the employer's logo and brand icons
+CLAUDE.md
+branding/

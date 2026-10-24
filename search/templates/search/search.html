@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Търсене{% endblock %}
+{% block header_search %}{% endblock %}
+
+{% block content %}
+<section class="hero hero--compact">
+    <h1>Търсене</h1>
+    <form class="search-form search-form--large" action="{% url 'search' %}" method="get" role="search">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Опишете проблема, напр. „принтер“ или „каса“" aria-label="Търсене" autofocus>
+        <button type="submit">Търси</button>
+    </form>
+</section>
+
+{% if search_query %}
+    {% if search_results %}
+    <p class="muted">Намерени: {{ result_count }}</p>
+    <div class="card-grid">
+        {% for guide in search_results %}{% include "includes/guide_card.html" with show_department=True %}{% endfor %}
+    </div>
+    {% with q=search_query|urlencode %}{% include "includes/pagination.html" with items=search_results extra="q="|add:q %}{% endwith %}
+    {% else %}
+    <div class="empty-state">
+        <h2>Няма резултати за „{{ search_query }}“</h2>
+        <p>Опитайте с по-кратка или друга дума, напр. само „принт“ вместо „принтерът не печата“.</p>
+    </div>
+    {% endif %}
+{% endif %}
+{% endblock %}

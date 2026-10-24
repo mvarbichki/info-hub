@@ -1,0 +1,5 @@
+{% load wagtailcore_tags %}
+<aside class="note note--{{ value.style }}">
+    <strong class="note__label">{% if value.style == "warning" %}Внимание{% elif value.style == "tip" %}Съвет{% else %}Информация{% endif %}</strong>
+    <div class="richtext">{{ value.text|richtext }}</div>
+</aside>

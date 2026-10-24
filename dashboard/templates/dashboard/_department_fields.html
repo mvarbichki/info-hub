@@ -1,0 +1,11 @@
+{# Fields shared by "Нов раздел" and "Редакция на раздел". #}
+<div class="form-grid">
+    <label class="field">{{ form.title.label }}<input type="text" name="title" value="{{ form.title.value|default:'' }}" maxlength="255" required></label>
+    {% if form.slug %}
+    <label class="field">{{ form.slug.label }} <span class="muted small">{{ form.slug.help_text }}</span><input type="text" name="slug" value="{{ form.slug.value|default:'' }}" maxlength="80" pattern="[a-z0-9\-]*" placeholder="от името"></label>
+    {% endif %}
+    <label class="field field--span">{{ form.description.label }} <span class="muted small">(показва се на плочката на началната страница)</span><input type="text" name="description" value="{{ form.description.value|default:'' }}" maxlength="255"></label>
+    <label class="field">{{ form.color.label }}{{ form.color }}</label>
+    <label class="field">{{ form.icon.label }}{{ form.icon }}</label>
+</div>
+{% for field in form %}{% for error in field.errors %}<p class="field-error">{{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Потребители – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="users" %}
+{% include "dashboard/_messages.html" %}
+
+<section class="panel" id="new-user">
+    <h2>Нов потребител</h2>
+    <ul class="muted small role-help">
+        <li><b>Служители на обект</b> – виждат публикациите за всички обекти и за своя обект. Само четат.</li>
+        <li><b>Управител на обект</b> – вижда същото и публикациите само за управители. Само чете.</li>
+        <li><b>Редактор</b> – пише публикациите на своя раздел в „Управление“. При първия вход сменя паролата.</li>
+    </ul>
+    {% if not venues %}<p class="flash flash--warning">Още няма обекти. Добавете ги първо в <a href="{% url 'dashboard:venues' %}">Обекти</a>.</p>{% endif %}
+    <form method="post" class="user-form" autocomplete="off" data-user-form>
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        <div class="form-grid">
+            <label class="field">{{ form.role.label }}
+                <select name="role" data-role>
+                    {% for value, label in roles %}<option value="{{ value }}" {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                {% for error in form.role.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>
+            <label class="field" data-for-venue>{{ form.venue.label }}
+                <select name="venue" data-venue>
+                    <option value="">– изберете обект –</option>
+                    {% for v in venues %}<option value="{{ v.pk }}" {% if form.venue.value|stringformat:"s" == v.pk|stringformat:"s" %}selected{% endif %}>{{ v.name }}{% if not v.is_active %} (спрян){% endif %}</option>{% endfor %}
+                </select>
+                {% for error in form.venue.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>
+            <label class="field" data-for-editor>{{ form.department.label }}
+                <select name="department">
+                    <option value="">– изберете раздел –</option>
+                    {% for d in departments %}<option value="{{ d.pk }}" {% if form.department.value|stringformat:"s" == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
+                </select>
+                {% for error in form.department.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>
+            <label class="field">{{ form.username.label }}
+                <input type="text" name="username" value="{{ form.username.value|default:'' }}" maxlength="40" autocapitalize="none" spellcheck="false" data-username>
+                <span class="muted small">{{ form.username.help_text }}</span>
+                {% for error in form.username.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>
+            <label class="field">{{ form.password.label }}{{ form.password }}
+                <span class="muted small" data-for-venue>Поне 8 знака, да не е често срещана и да не е само цифри. Кажете я в обекта.</span>
+                <span class="muted small" data-for-editor>Временна. Празно = същата като потребителското име.</span>
+                {% for error in form.password.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>
+        </div>
+        <button type="submit" class="button-primary">Създай потребителя</button>
+    </form>
+</section>
+
+<section class="panel">
+    <h2>Потребители ({{ accounts|length }}{% if filtered %}, филтрирани{% endif %})</h2>
+    <div class="panel__head">
+        <form method="get" class="list-filter">
+            <select name="role" onchange="this.form.submit()" aria-label="Роля">
+                <option value="">Всички роли</option>
+                <option value="admin" {% if role_filter == "admin" %}selected{% endif %}>Администратор</option>
+                <option value="editor" {% if role_filter == "editor" %}selected{% endif %}>Редактори</option>
+                <option value="staff" {% if role_filter == "staff" %}selected{% endif %}>Служители на обект</option>
+                <option value="manager" {% if role_filter == "manager" %}selected{% endif %}>Управители на обект</option>
+            </select>
+            <select name="venue" onchange="this.form.submit()" aria-label="Обект">
+                <option value="">Всички обекти</option>
+                {% for v in venues %}<option value="{{ v.pk }}" {% if venue_filter == v.pk|stringformat:"d" %}selected{% endif %}>{{ v.name }}</option>{% endfor %}
+            </select>
+            <input type="search" name="q" value="{{ query }}" placeholder="Търси име или обект" aria-label="Търси потребител или обект">
+            {% if filtered %}<a href="{% url 'dashboard:users' %}">Покажи всички</a>{% endif %}
+        </form>
+    </div>
+    {% if accounts %}
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Потребител</th><th>Роля</th><th>Обект / раздел</th><th>Последен вход</th><th>Статус</th><th></th></tr></thead>
+        <tbody>
+        {% for account in accounts %}
+        <tr class="{% if not account.is_active or account.venue_stopped %}is-hidden{% endif %}">
+            <td class="guide-table__title">{{ account.username }}{% if account == request.user %} <span class="muted small">(вие)</span>{% endif %}</td>
+            <td>{{ account.role_label }}</td>
+            <td>{{ account.place }}</td>
+            <td class="nowrap">{{ account.last_login|date:"j.m.Y H:i"|default:"никога" }}</td>
+            <td>
+                {% if not account.is_active %}<span class="status status--hidden">Спрян</span>
+                {% elif account.venue_stopped %}<span class="status status--hidden">Обектът е спрян</span>
+                {% elif not account.has_usable_password %}<span class="status status--pending">Няма парола</span>
+                {% elif account.must_change %}<span class="status status--pending">Временна парола</span>
+                {% else %}<span class="status status--live">Активен</span>{% endif %}
+            </td>
+            <td class="actions">
+                {% if not account.is_superuser and account != request.user %}
+                <a href="{% url 'dashboard:edit_user' account.pk %}">Редактирай</a>
+                {% if account.kind == "editor" %}
+                <form method="post" action="{% url 'dashboard:reset_password' account.pk %}" data-confirm="Да нулирам ли паролата на „{{ account.username }}“? Новата временна парола ще е „{{ account.username }}“.">{% csrf_token %}<button type="submit" class="link-button">Нулирай парола</button></form>
+                {% else %}
+                <a href="{% url 'dashboard:user_password' account.pk %}">{% if account.has_usable_password %}Смени паролата{% else %}Задай парола{% endif %}</a>
+                {% endif %}
+                <form method="post" action="{% url 'dashboard:toggle_user' account.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="link-button">{% if account.is_active %}Спри{% else %}Пусни{% endif %}</button></form>
+                <form method="post" action="{% url 'dashboard:delete_user' account.pk %}" data-confirm="Да изтрия ли потребителя „{{ account.username }}“?{% if account.kind == 'editor' %} Публикациите му остават.{% endif %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="link-button link-button--danger">Изтрий</button></form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="muted">Няма потребители{% if filtered %} по този филтър{% endif %}.</p>
+    {% endif %}
+    <p class="muted small">Компютрите в обектите остават влезли до една година; след смяна на паролата там трябва да се влезе отново. „Нулирай парола“ (редактори) връща паролата да е същата като потребителя и при вход трябва да се смени. Администраторите се управляват в „Разширени настройки“ → Users.</p>
+</section>
+{{ login_bases|json_script:"login-bases" }}
+{{ taken_usernames|json_script:"taken-usernames" }}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}

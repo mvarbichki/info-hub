@@ -1,0 +1,36 @@
+# The internet variant with HTTPS (e.g. the Oracle Cloud demo), on top of docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+# Caddy answers on 80/443 with a Let's Encrypt certificate for SITE_DOMAIN (.env); nginx is no
+# longer reachable from outside.
+
+# (A YAML anchor can't come from the other file, so the log limits are repeated here.)
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  nginx:
+    ports: !reset []
+
+  caddy:
+    logging: *logging
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - nginx
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block content %}
+{% include "includes/breadcrumbs.html" %}
+
+<header class="page-header dept--{{ page.color }}">
+    <span class="page-header__icon">{% include "includes/icon.html" with name=page.icon %}</span>
+    <div>
+        <h1>{{ page.title }}</h1>
+        {% if page.description %}<p class="page-header__desc">{{ page.description }}</p>{% endif %}
+    </div>
+</header>
+
+{% if categories %}
+<section class="section">
+    <h2 class="section__title">Категории</h2>
+    <div class="category-list">
+        {% for category in categories %}
+        <a class="category-chip" href="{% pageurl category %}">{{ category.title }} <span>{{ category.guide_count }}</span></a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="section">
+    <div class="section__head">
+        <h2 class="section__title">Публикации</h2>
+        <nav class="filter-tabs" aria-label="Вид">
+            <a href="{% pageurl page %}" class="{% if not active_kind %}is-active{% endif %}">Всички</a>
+            {% for value, label in kinds %}
+            <a href="?type={{ value }}" class="{% if active_kind == value %}is-active{% endif %}">{{ label }}</a>
+            {% endfor %}
+        </nav>
+    </div>
+    {% if guides %}
+    <div class="card-grid">
+        {% for guide in guides %}{% include "includes/guide_card.html" %}{% endfor %}
+    </div>
+    {% include "includes/pagination.html" with items=guides extra="type="|add:active_kind %}
+    {% else %}
+    <p class="muted">Няма публикации.</p>
+    {% endif %}
+</section>
+{% endblock %}

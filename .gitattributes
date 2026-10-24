@@ -1,0 +1,7 @@
+# Normalise text files; server files keep Linux line endings even when checked out on Windows.
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+deploy/* text eol=lf
+*.png binary
+*.ico binary

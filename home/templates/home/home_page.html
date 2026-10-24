@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block body_class %}page-home{% endblock %}
+{% block title %}{{ settings.home.SiteBranding.site_name }}{% endblock %}
+{% block header_search %}{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Как можем да помогнем?</h1>
+    {% if page.intro %}<p class="hero__intro">{{ page.intro }}</p>{% endif %}
+    <form class="search-form search-form--large" action="{% url 'search' %}" method="get" role="search">
+        <input type="search" name="q" placeholder="Опишете проблема, напр. „принтер“ или „каса“" aria-label="Търсене" autofocus>
+        <button type="submit">Търси</button>
+    </form>
+    {% if popular_searches %}
+    <p class="search-chips">
+        <span class="search-chips__label">Често търсено:</span>
+        {% for item in popular_searches %}<a class="chip" href="{% url 'search' %}?q={{ item.query|urlencode }}">{{ item.query }}</a>{% endfor %}
+    </p>
+    {% endif %}
+</section>
+
+{% if unread %}
+<section class="section section--unread">
+    <h2 class="section__title">Нови за вас ({{ unread_count }})</h2>
+    <p class="muted small">Изчезват оттук, когато ги отворите (а тези с „Потвърдете прочитане“ – когато натиснете „Прочетох“ най-долу в публикацията).</p>
+    <div class="card-grid">
+        {% for guide in unread %}{% include "includes/guide_card.html" with show_department=True %}{% endfor %}
+    </div>
+    {% if unread_more %}<p class="muted">И още {{ unread_more }} – отворете първо тези.</p>{% endif %}
+</section>
+{% endif %}
+
+{% if pinned %}
+<section class="section">
+    <h2 class="section__title">Важно</h2>
+    <div class="card-grid card-grid--pinned">
+        {% for guide in pinned %}{% include "includes/guide_card.html" with show_department=True %}{% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if latest or not unread and not pinned %}
+<section class="section">
+    <h2 class="section__title">Последни публикации</h2>
+    {% if latest %}
+    <div class="card-grid">
+        {% for guide in latest %}{% include "includes/guide_card.html" with show_department=True %}{% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">Все още няма публикации.</p>
+    {% endif %}
+</section>
+{% endif %}
+
+{% if departments %}
+<section class="section">
+    <h2 class="section__title">Разгледайте по раздел</h2>
+    <div class="dept-list">
+        {% for department in departments %}
+        <div class="dept-card dept--{{ department.color }}">
+            <a class="dept-card__head" href="{% pageurl department %}">
+                {% include "includes/icon.html" with name=department.icon %}<span>{{ department.title }}</span>
+            </a>
+            {% if department.highlights %}
+            <ul>{% for guide in department.highlights %}<li><a href="{% pageurl guide %}">{{ guide.title }}</a></li>{% endfor %}</ul>
+            {% elif department.description %}
+            <p class="muted small">{{ department.description }}</p>
+            {% endif %}
+            <a class="dept-card__all" href="{% pageurl department %}">Всички ({{ department.guide_count }}) →</a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Статистика – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="stats" %}
+{% include "dashboard/_messages.html" %}
+
+<section class="panel">
+    <div class="panel__head">
+        <h2>Какво търсят обектите{% if venue %}: {{ venue.name }}{% endif %}</h2>
+        <form method="get" class="list-filter">
+            <select name="days" onchange="this.form.submit()" aria-label="Период">
+                {% for d in periods %}<option value="{{ d }}" {% if d == days %}selected{% endif %}>Последните {{ d }} дни</option>{% endfor %}
+            </select>
+            {% if venues %}
+            <select name="venue" onchange="this.form.submit()" aria-label="Обект">
+                <option value="">Всички обекти</option>
+                {% for v in venues %}<option value="{{ v.pk }}" {% if venue_id == v.pk|stringformat:"d" %}selected{% endif %}>{{ v.name }}</option>{% endfor %}
+            </select>
+            {% endif %}
+            {% if departments|length > 1 %}
+            <select name="department" onchange="this.form.submit()" aria-label="Раздел">
+                <option value="">Всички раздели</option>
+                {% for d in departments %}<option value="{{ d.pk }}" {% if department_id == d.pk|stringformat:"d" %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
+            </select>
+            {% endif %}
+        </form>
+    </div>
+    <p class="muted small">Броят се посещенията на служителите и управителите на обектите (без обекта „Обучение“, т.е. потребителите <code>staff</code> и <code>manager</code>, и без влезлите в управлението), по обект. Не се пази кой човек е търсил или чел.</p>
+
+    <div class="stats-columns">
+        <div>
+            <h3>Търсено, но не е намерено</h3>
+            <p class="muted small">Това липсва на сайта. Ако темата е ваша, добавете публикация или сложете думата в заглавието или описанието на съществуваща.</p>
+            {% if failed %}
+            <table class="guide-table">
+                <thead><tr><th>Търсено</th><th>Пъти</th><th>Последно</th></tr></thead>
+                <tbody>
+                {% for item in failed %}
+                <tr><td class="guide-table__title">{{ item.query }}</td><td>{{ item.total }}</td><td class="nowrap">{{ item.last_day|date:"j.m.Y" }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="muted">Няма неуспешни търсения за периода.</p>
+            {% endif %}
+        </div>
+        <div>
+            <h3>Най-търсено</h3>
+            <p class="muted small">Търсения, които намират нещо. Търсените поне 3 пъти се показват и на началната страница.</p>
+            {% if searches %}
+            <table class="guide-table">
+                <thead><tr><th>Търсено</th><th>Пъти</th></tr></thead>
+                <tbody>
+                {% for item in searches %}
+                <tr><td class="guide-table__title"><a href="{% url 'search' %}?q={{ item.query|urlencode }}" target="_blank">{{ item.query }}</a></td><td>{{ item.total }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="muted">Още няма търсения за периода.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% if venue_rows %}
+<section class="panel">
+    <h2>По обекти</h2>
+    <p class="muted small">Обект без прочитания и търсения може би не ползва сайта. Много „Не“ или търсения без резултат показват какво им липсва – изберете обекта горе за подробности.{% if not request.user.is_superuser %} Прочитанията и „Не“ са само за публикациите на вашия раздел.{% endif %}</p>
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Обект</th><th>Прочитания</th><th>Помогна: Да</th><th>Не</th><th>Търсения</th><th>Без резултат</th></tr></thead>
+        <tbody>
+        {% for row in venue_rows %}
+        <tr>
+            <td class="guide-table__title"><a href="?days={{ days }}&department={{ department_id }}&venue={{ row.venue.pk }}">{{ row.venue.name }}</a>{% if not row.views and not row.searches %} <span class="status status--pending">Не ползва сайта</span>{% endif %}</td>
+            <td>{{ row.views }}</td><td>{{ row.yes }}</td><td>{{ row.no }}</td><td>{{ row.searches }}</td><td>{{ row.empty }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endif %}
+
+<section class="panel">
+    <h2>Публикации: прочитания и „Помогна ли ви?“{% if venue %} – {{ venue.name }}{% endif %}</h2>
+    <p class="muted small">Публикациите на сайта, най-четените първо. Ако „Не“ е повече от „Да“, публикацията е отбелязана – прегледайте я и я направете по-ясна.</p>
+    {% if guides %}
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Заглавие</th><th>Раздел</th><th>Прочитания</th><th>Помогна: Да</th><th>Не</th></tr></thead>
+        <tbody>
+        {% for guide in guides %}
+        <tr>
+            <td class="guide-table__title">
+                <a href="{{ guide.url }}" target="_blank">{{ guide.title }}</a>
+                {% if guide.no_votes > guide.yes_votes %}<span class="status status--pending">За преглед</span>{% endif %}
+            </td>
+            <td>{{ guide.department.title }}</td>
+            <td>{{ guide.recent_views }}</td>
+            <td>{{ guide.yes_votes }}</td>
+            <td>{{ guide.no_votes }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% include "includes/pagination.html" with items=guides extra=page_params %}
+    {% else %}
+    <p class="muted">Няма публикации на сайта.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% load static wagtailcore_tags wagtailimages_tags %}
+{% with branding=settings.home.SiteBranding %}
+<!DOCTYPE html>
+<html lang="bg">
+    <head>
+        <meta charset="utf-8" />
+        <title>{% block title %}{% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}{% endblock %} – {{ branding.site_name }}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#3a1748" />
+        <link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+        <link rel="icon" href="{% static 'img/favicon.png' %}" type="image/png">
+        <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+        <meta name="robots" content="noindex, nofollow" />
+
+        {# Force all links in the live preview panel to be opened in a new tab #}
+        {% if request.in_preview_panel %}
+        <base target="_blank">
+        {% endif %}
+
+        <link rel="stylesheet" href="{% static 'css/infohub.css' %}">
+        {% block extra_css %}{% endblock %}
+    </head>
+
+    <body class="{% block body_class %}{% endblock %}">
+        {% if manage_bar %}
+        <div class="manage-bar">
+            <div class="container manage-bar__inner">
+                <span>Режим управление · <b>{{ manage_bar.title }}</b></span>
+                <nav class="manage-bar__links" aria-label="Управление">
+                    {% if page and page.pk in manage_bar.place_ids %}<a href="{% url 'dashboard:new' %}?place={{ page.pk }}">+ Добави публикация тук</a>{% endif %}
+                    {% if audience_summary %}<span class="manage-bar__audience">Вижда се от: <b>{{ audience_summary }}</b></span>{% endif %}
+                    {% if can_edit %}<a href="{% url 'dashboard:update' page.pk %}">Редактирай тази публикация</a>{% endif %}
+                    <a href="{% url 'dashboard:index' %}">Към управлението</a>
+                    <form method="post" action="{% url 'dashboard:logout' %}">{% csrf_token %}<button type="submit" class="link-button">Изход ({{ request.user.username }})</button></form>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+        <header class="site-header">
+            <div class="container site-header__inner">
+                <a class="brand" href="/">
+                    {% if branding.logo %}
+                        {% image branding.logo height-112 class="brand__logo" alt=branding.site_name %}
+                    {% else %}
+                        {# Logo slot: upload a logo in admin -> Settings -> Лого и име на сайта #}
+                        <span class="brand__placeholder" aria-hidden="true">ЛОГО</span>
+                    {% endif %}
+                    <span class="brand__name">{{ branding.site_name }}</span>
+                </a>
+                {% block header_search %}
+                <form class="search-form search-form--compact" action="{% url 'search' %}" method="get" role="search">
+                    <input type="search" name="q" value="{{ search_query|default:'' }}" placeholder="Търсене…" aria-label="Търсене">
+                    <button type="submit">Търси</button>
+                </form>
+                {% endblock %}
+            </div>
+            {% block nav %}
+            <nav class="site-nav" aria-label="Раздели">
+                <div class="container site-nav__inner">
+                    <a href="/" class="site-nav__link{% if page.depth == 2 %} is-active{% endif %}">Начало</a>
+                    {% for department in nav_departments %}
+                        <a href="{% pageurl department %}" class="site-nav__link{% if page and page.path|slice:':12' == department.path %} is-active{% endif %}">{{ department.title }}</a>
+                    {% endfor %}
+                    {% if venue_mode %}<form method="post" action="{% url 'dashboard:logout' %}" class="site-nav__logout">{% csrf_token %}<button type="submit" class="site-nav__link site-nav__login">Изход ({{ request.user.username }})</button></form>{% endif %}
+                </div>
+            </nav>
+            {% endblock %}
+        </header>
+
+        <main class="container site-main">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="site-footer">
+            <div class="container">
+                {% if branding.footer_text %}<p>{{ branding.footer_text }}</p>{% endif %}
+            </div>
+        </footer>
+
+        <script src="{% static 'js/infohub.js' %}"></script>
+        {% block extra_js %}{% endblock %}
+    </body>
+</html>
+{% endwith %}

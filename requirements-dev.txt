@@ -1,0 +1,3 @@
+-r requirements.txt
+# Tests: python manage.py test (see tests/README.md). Coverage: coverage run manage.py test && coverage report
+coverage>=7.10

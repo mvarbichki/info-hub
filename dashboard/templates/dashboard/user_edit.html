@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ account.username }} – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="users" %}
+
+<section class="panel panel--narrow">
+    <h1 class="panel__title">Потребител „{{ account.username }}“</h1>
+    <form method="post" class="login-form" autocomplete="off">
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        <label>{{ form.username.label }}<input type="text" name="username" value="{{ form.username.value|default:'' }}" maxlength="40" required autocapitalize="none" spellcheck="false"></label>
+        {% for error in form.username.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        {% if venue_account %}
+        <label>{{ form.role.label }}
+            <select name="role">
+                {% for value, label in form.role.field.choices %}<option value="{{ value }}" {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select></label>
+        {% for error in form.role.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        <label>{{ form.venue.label }}
+            <select name="venue">
+                {% for v in form.venue.field.queryset %}<option value="{{ v.pk }}" {% if form.venue.value|stringformat:"s" == v.pk|stringformat:"s" %}selected{% endif %}>{{ v.name }}</option>{% endfor %}
+            </select></label>
+        {% for error in form.venue.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        {% else %}
+        <input type="hidden" name="role" value="editor">
+        <label>{{ form.department.label }}
+            <select name="department">
+                {% if not form.department.value %}<option value="">– изберете раздел –</option>{% endif %}
+                {% for d in form.department.field.queryset %}<option value="{{ d.pk }}" {% if form.department.value|stringformat:"s" == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
+            </select></label>
+        {% for error in form.department.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        {% endif %}
+        <p class="muted small">{% if venue_account %}Промените важат веднага, от следващата отворена страница; паролата остава. {% endif %}Ако смените потребителското име, при следващия вход се влиза с новото.</p>
+        <button type="submit" class="button-primary">Запази</button>
+    </form>
+    <p class="panel__back"><a href="{% url 'dashboard:users' %}">Отказ</a></p>
+</section>
+{% endblock %}

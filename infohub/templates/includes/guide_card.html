@@ -1,0 +1,12 @@
+{% load wagtailcore_tags audience_tags %}
+<a class="guide-card" href="{% pageurl guide %}">
+    <div class="guide-card__meta">
+        <span class="badge badge--{{ guide.kind }}">{{ guide.get_kind_display }}</span>
+        {% fresh_badge guide as fresh %}{% if fresh %}<span class="badge badge--{{ fresh.0 }}">{{ fresh.1 }}</span>{% endif %}
+        {% audience_badge guide as for_whom %}{% if for_whom %}<span class="badge badge--audience{% if for_whom == "Само за управители" %} badge--managers{% endif %}">{{ for_whom }}</span>{% endif %}
+        {% if show_department %}{% with department=guide.department %}{% if department %}<span class="guide-card__dept dept--{{ department.color }}">{{ department.title }}</span>{% endif %}{% endwith %}{% endif %}
+    </div>
+    <h3 class="guide-card__title">{{ guide.title }}</h3>
+    {% if guide.summary %}<p class="guide-card__summary">{{ guide.summary }}</p>{% endif %}
+    <time class="guide-card__date" datetime="{{ guide.last_published_at|date:'c' }}">{{ guide.last_published_at|date:"j E Y" }}</time>
+</a>

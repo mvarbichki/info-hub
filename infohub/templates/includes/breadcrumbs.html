@@ -1,0 +1,7 @@
+{% load wagtailcore_tags %}
+<nav class="breadcrumbs" aria-label="Път">
+    {% for ancestor in page.get_ancestors %}{% if ancestor.depth > 1 %}
+        <a href="{% pageurl ancestor %}">{% if ancestor.depth == 2 %}Начало{% else %}{{ ancestor.title }}{% endif %}</a><span aria-hidden="true">›</span>
+    {% endif %}{% endfor %}
+    <span aria-current="page">{{ page.title }}</span>
+</nav>

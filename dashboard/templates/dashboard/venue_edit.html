@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ venue.name }} – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="venues" %}
+
+<section class="panel panel--narrow">
+    <h1 class="panel__title">Обект „{{ venue.name }}“</h1>
+    <form method="post" class="login-form" autocomplete="off">
+        {% csrf_token %}
+        <label>{{ form.name.label }}<input type="text" name="name" value="{{ form.name.value|default:'' }}" maxlength="100" required></label>
+        {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        <p class="muted small">Потребителите на обекта и паролите им остават. Те се променят в <a href="{% url 'dashboard:users' %}?venue={{ venue.pk }}">Потребители</a>.</p>
+        <button type="submit" class="button-primary">Запази</button>
+    </form>
+    <p class="panel__back"><a href="{% url 'dashboard:venues' %}">Отказ</a></p>
+</section>
+{% endblock %}
