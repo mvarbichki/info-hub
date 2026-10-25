@@ -35,7 +35,14 @@ sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
 sudo netfilter-persistent save
 ```
 
-**D. The project** – step **3** below (WinSCP or `tar` + `scp`), to `/opt/infohub`.
+**D. The project** – straight from GitHub:
+
+```bash
+sudo mkdir -p /opt/infohub && sudo chown $USER /opt/infohub
+git clone https://github.com/mvarbichki/info-hub.git /opt/infohub
+```
+
+(Without access to the repository: step **3** below, WinSCP or `tar` + `scp`.)
 
 **E. Settings** – `cp .env.example .env`, `nano .env`:
 
@@ -88,9 +95,17 @@ and on your PC `del site.json`.
 Обекти → **„Нови пароли за всички обекти и лист за печат“** gives every venue its own password
 (print the sheet) – or at least change the passwords of the accounts used in the demo.
 
-**Updating** after changes on your PC: copy the files (step 3, keep `.env`), then
-`docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build`. Before that, run
-the tests on your PC (`manage.py test`, see `tests/README.md`).
+**Updating** after changes have been pushed to GitHub (run the tests first: `manage.py test`, see
+`tests/README.md`):
+
+```bash
+cd /opt/infohub
+git pull
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+docker image prune -f
+```
+
+`.env` is not in the repository, so `git pull` never touches it.
 
 ## The Docker setup (sections 1–8, first written for the VPN)
 
@@ -163,7 +178,7 @@ sudo mkdir -p /opt/infohub && sudo chown $USER /opt/infohub
 tar -xzf /tmp/infohub.tar.gz -C /opt/infohub
 ```
 
-(Later it's worth putting the project in a private Git repository and using `git pull` on the VM.)
+(With access to the repository, `git clone` is simpler: see step **D** of the Oracle demo.)
 
 ## 4. Configure
 
@@ -255,7 +270,7 @@ docker compose up -d --build
 docker image prune -f    # remove the old image versions (each one is several hundred MB)
 ```
 
-Note: `deploy/nginx.conf` allows uploads up to 520 MB. If you raise `INFOHUB_LIMITS_MB` in
+Note: `deploy/nginx.conf` allows uploads up to 320 MB. If you raise `INFOHUB_LIMITS_MB` in
 `infohub/settings/base.py`, raise `client_max_body_size` there too.
 
 Database changes (migrations) are applied automatically on start. Content and uploads
