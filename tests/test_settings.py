@@ -9,6 +9,7 @@ import re
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 from unittest import mock
 
 from django.core.management import call_command
@@ -17,6 +18,7 @@ from django.template.loader import render_to_string
 from django.test import Client, SimpleTestCase, TransactionTestCase
 
 from home.checks import mariadb_charset
+from infohub.envfile import load
 
 from .base import InfoHubTestCase
 
@@ -73,6 +75,29 @@ class PagesTests(SimpleTestCase):
         html = render_to_string("500.html")
         self.assertRegex(html, r"\d{1,2}\.\d{2}\.\d{4} \d{2}:\d{2}")
         self.assertIn("записана", html)
+
+
+class EnvFileTests(SimpleTestCase):
+    """Shared hosting: passenger_wsgi.py and manage.py read the settings from .env."""
+
+    def test_lines_are_read_and_the_real_environment_wins(self):
+        folder = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, folder, ignore_errors=True)
+        path = os.path.join(folder, ".env")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("# comment\n\nINFOHUB_T_A=1\nexport INFOHUB_T_B = 'a b=c'\nINFOHUB_T_C=\"x\"\nnot a setting\nINFOHUB_T_D=new\n")
+        with mock.patch.dict(os.environ, {"INFOHUB_T_D": "old"}):
+            load(path)
+            self.assertEqual([os.environ.get(f"INFOHUB_T_{k}") for k in "ABCD"], ["1", "a b=c", "x", "old"])
+        load(os.path.join(folder, "missing.env"))  # no file: nothing happens
+
+    def test_static_root_can_be_moved(self):
+        with mock.patch.dict(os.environ, {"INFOHUB_STATIC_ROOT": "/home/u/site/static"}):
+            sys.modules.pop("infohub.settings.base", None)
+            try:
+                self.assertEqual(str(importlib.import_module("infohub.settings.base").STATIC_ROOT), str(Path("/home/u/site/static")))
+            finally:
+                sys.modules.pop("infohub.settings.base", None)
 
 
 class DatabaseCheckTests(InfoHubTestCase):

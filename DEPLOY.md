@@ -306,10 +306,14 @@ The full cPanel guide comes later; the database part is ready (tested on MariaDB
    (MariaDB's default is latin1, which can't store Cyrillic. `migrate` refuses to run on a wrong
    database and prints this command: check `infohub.E001` in `home/checks.py`.)
 2. Install with `pip install -r requirements-mariadb.txt` (adds the `mysqlclient` driver).
-3. Environment variables of the app (cPanel → Setup Python App): `MARIADB_DB`, `MARIADB_USER`,
+3. The settings go into a file **`.env` in the app's folder** (outside public_html, `chmod 600`).
+   `passenger_wsgi.py` (the web app), `manage.py` (terminal, cron) read it, so there is one place
+   for them: `DJANGO_SETTINGS_MODULE=infohub.settings.production`, `MARIADB_DB`, `MARIADB_USER`,
    `MARIADB_PASSWORD`, optional `MARIADB_HOST` (default `localhost`), `MARIADB_PORT` (3306),
-   `MARIADB_COLLATION` (default `utf8mb4_unicode_ci`), plus the usual `DJANGO_*` ones and
-   `INFOHUB_LOG_FILE` (see "Error log").
+   `MARIADB_COLLATION` (default `utf8mb4_unicode_ci`), the usual `DJANGO_*` ones,
+   `INFOHUB_STATIC_ROOT` (the subdomain's document root + `/static`, so Apache serves CSS/JS
+   itself; uploads stay in the app folder's `media/`, protected) and `INFOHUB_LOG_FILE` (see
+   "Error log"). Variables set in cPanel's app page win over the file.
 
 ## Moving the whole site to another server
 

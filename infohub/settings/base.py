@@ -206,7 +206,8 @@ STATICFILES_DIRS = [
     PROJECT_DIR / "static",
 ]
 
-STATIC_ROOT = BASE_DIR / "static"
+# Shared hosting: the subdomain's document root + "/static", so the web server sends these files itself.
+STATIC_ROOT = Path(os.environ.get("INFOHUB_STATIC_ROOT", BASE_DIR / "static"))
 STATIC_URL = "/static/"
 
 MEDIA_ROOT = BASE_DIR / "media"
