@@ -177,6 +177,8 @@ class MoveSiteTests(TransactionTestCase):
         self.addCleanup(shutil.rmtree, folder, ignore_errors=True)
         path = os.path.join(folder, "site.json")
         call_command("export_site", path, stdout=io.StringIO())
+        with open(path, encoding="utf-8") as f:
+            self.assertIn("Перник", f.read())  # UTF-8 whatever the system code page (Windows: cp1251/1252)
 
         with self.assertRaises(CommandError):
             call_command("import_site", path)  # without --yes nothing happens
