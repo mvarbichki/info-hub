@@ -60,7 +60,7 @@ copy with fictional venues and content.
 python manage.py test
 ```
 
-- **162 tests** on a separate test database: access per role, visibility per venue and role, the editor and uploads, every error message, the panel, settings, moving a site, and edge cases such as hostile input, open redirects, odd search input and unknown ids.
+- **165 tests** on a separate test database: access per role, visibility per venue and role, the editor and uploads, every error message, the panel, settings, moving a site, and edge cases such as hostile input, open redirects, odd search input and unknown ids.
 - **92 browser checks** of the JavaScript (editor, audience picker, user form) in jsdom on freshly rendered pages, run from the same command.
 - **98 % line coverage**; `pyflakes` and dead-code scans clean; no known vulnerabilities in the dependencies.
 

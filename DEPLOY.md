@@ -305,6 +305,9 @@ The full cPanel guide comes later; the database part is ready (tested on MariaDB
    ``ALTER DATABASE `<name>` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;``
    (MariaDB's default is latin1, which can't store Cyrillic. `migrate` refuses to run on a wrong
    database and prints this command: check `infohub.E001` in `home/checks.py`.)
+   Tables are always made as InnoDB, also where the server's default is MyISAM (the connection
+   asks for it). Tables left by a MyISAM migrate before that stop `migrate` (`infohub.E002`):
+   drop them in phpMyAdmin and migrate again.
 2. Install with `pip install -r requirements-mariadb.txt`. It adds PyMySQL, a database driver that needs no C compiler (shared hosting has none, so `mysqlclient` fails with "Permission denied: gcc"); where `mysqlclient` is installed, it is used instead.
 3. The settings go into a file **`.env` in the app's folder** (outside public_html, `chmod 600`).
    `passenger_wsgi.py` (the web app), `manage.py` (terminal, cron) read it, so there is one place

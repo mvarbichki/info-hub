@@ -17,7 +17,7 @@ from django.db import connection
 from django.template.loader import render_to_string
 from django.test import Client, SimpleTestCase, TransactionTestCase
 
-from home.checks import mariadb_charset
+from home.checks import mariadb_database
 from infohub.envfile import load
 
 from .base import InfoHubTestCase
@@ -101,19 +101,41 @@ class EnvFileTests(SimpleTestCase):
 
 
 class DatabaseCheckTests(InfoHubTestCase):
-    def test_sqlite_is_not_checked(self):
-        self.assertEqual(mariadb_charset(None, databases=["default"]), [])
-
-    def test_wrong_mariadb_charset_is_reported(self):
+    def check(self, charset, tables):
         cursor = mock.MagicMock()
-        cursor.__enter__.return_value.fetchone.return_value = ("latin1", "latin1_swedish_ci")
+        cursor.__enter__.return_value.fetchone.return_value = charset
+        cursor.__enter__.return_value.fetchall.return_value = [(t,) for t in tables]
         fake = mock.MagicMock(vendor="mysql", settings_dict={"NAME": "infohub", "OPTIONS": {"collation": "utf8mb4_unicode_ci"}})
         fake.cursor.return_value = cursor
         with mock.patch("home.checks.connections", {"default": fake}):
-            errors = mariadb_charset(None, databases=["default"])
+            return mariadb_database(None, databases=["default"])
+
+    def test_sqlite_is_not_checked(self):
+        self.assertEqual(connection.vendor, "sqlite")
+        self.assertEqual(mariadb_database(None, databases=["default"]), [])
+
+    def test_right_mariadb_database_passes(self):
+        self.assertEqual(self.check(("utf8mb4", "utf8mb4_unicode_ci"), []), [])
+
+    def test_wrong_mariadb_charset_is_reported(self):
+        errors = self.check(("latin1", "latin1_swedish_ci"), [])
         self.assertEqual([e.id for e in errors], ["infohub.E001"])
         self.assertIn("ALTER DATABASE `infohub` CHARACTER SET utf8mb4", errors[0].hint)
-        self.assertEqual(connection.vendor, "sqlite")
+
+    def test_myisam_tables_are_reported(self):
+        errors = self.check(("utf8mb4", "utf8mb4_unicode_ci"), ["wagtailcore_page", "auth_user"])
+        self.assertEqual([e.id for e in errors], ["infohub.E002"])
+        self.assertIn("2 tables", errors[0].msg)
+        self.assertIn("Drop", errors[0].hint)
+
+    def test_mariadb_connection_asks_for_innodb(self):
+        with mock.patch.dict(os.environ, {"MARIADB_DB": "x"}), mock.patch.dict(sys.modules, {"MySQLdb": mock.MagicMock()}):
+            sys.modules.pop("infohub.settings.base", None)
+            try:
+                options = importlib.import_module("infohub.settings.base").DATABASES["default"]["OPTIONS"]
+            finally:
+                sys.modules.pop("infohub.settings.base", None)
+        self.assertIn("default_storage_engine=INNODB", options["init_command"])
 
 
 class SetupCommandTests(InfoHubTestCase):

@@ -144,7 +144,8 @@ if os.environ.get("MARIADB_DB"):
                 "charset": "utf8mb4",
                 "collation": MARIADB_COLLATION,
                 # Strict mode: too-long or invalid values raise an error instead of being cut silently.
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                # InnoDB: some hosts make MyISAM tables by default (no transactions, keys too short).
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES', default_storage_engine=INNODB",
             },
             "TEST": {"CHARSET": "utf8mb4", "COLLATION": MARIADB_COLLATION},
         }
