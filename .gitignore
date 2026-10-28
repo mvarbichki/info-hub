@@ -19,6 +19,7 @@ infohub/settings/local.py
 
 # Exports with password hashes (export_site; old accounts-only export)
 site.json
+media.zip
 accounts.json
 
 # Kept on this PC only, never in the public repository:
