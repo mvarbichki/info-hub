@@ -1,3 +1,5 @@
 # For hosting with MariaDB/MySQL (e.g. SuperHosting cPanel): pip install -r requirements-mariadb.txt
 -r requirements.txt
-mysqlclient>=2.2.1
+# Pure-Python driver: installs without a C compiler, which shared hosting doesn't allow.
+# Where mysqlclient is installed (pip install "mysqlclient>=2.2.1"), it is used instead.
+PyMySQL>=1.1.1

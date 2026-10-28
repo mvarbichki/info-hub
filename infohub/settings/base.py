@@ -122,6 +122,15 @@ if os.environ.get("MARIADB_DB"):
     # can't store Cyrillic); the connection uses the same collation, else text comparisons fail.
     # Checked before `migrate` by home/checks.py.
     MARIADB_COLLATION = os.environ.get("MARIADB_COLLATION", "utf8mb4_unicode_ci")
+    try:
+        import MySQLdb  # noqa: F401  (mysqlclient, Django's recommended driver)
+    except ImportError:
+        # Shared hosting often has no C compiler to build mysqlclient: use the pure-Python PyMySQL
+        # in its place. It reports an old mysqlclient version, which Django would refuse.
+        import pymysql
+
+        pymysql.version_info = (2, 2, 1, "final", 0)
+        pymysql.install_as_MySQLdb()
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
