@@ -164,6 +164,9 @@ elif os.environ.get("POSTGRES_DB"):
             "PORT": os.environ.get("POSTGRES_PORT", "5432"),
         }
     }
+    # Wagtail's search index uses PostgreSQL's full-text fields there; Django refuses to start
+    # without this app (postgres.E005).
+    INSTALLED_APPS.append("django.contrib.postgres")
 else:
     DATABASES = {
         "default": {

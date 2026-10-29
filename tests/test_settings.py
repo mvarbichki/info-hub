@@ -137,6 +137,17 @@ class DatabaseCheckTests(InfoHubTestCase):
                 sys.modules.pop("infohub.settings.base", None)
         self.assertIn("default_storage_engine=INNODB", options["init_command"])
 
+    def test_postgres_switches_on_its_app(self):
+        # Docker: without django.contrib.postgres the web container stops at postgres.E005.
+        with mock.patch.dict(os.environ, {"POSTGRES_DB": "x"}):
+            sys.modules.pop("infohub.settings.base", None)
+            try:
+                settings = importlib.import_module("infohub.settings.base")
+            finally:
+                sys.modules.pop("infohub.settings.base", None)
+        self.assertEqual(settings.DATABASES["default"]["ENGINE"], "django.db.backends.postgresql")
+        self.assertIn("django.contrib.postgres", settings.INSTALLED_APPS)
+
 
 class SetupCommandTests(InfoHubTestCase):
     def test_setup_can_run_again_and_keeps_everything(self):
