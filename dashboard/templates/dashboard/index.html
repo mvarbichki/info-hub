@@ -43,7 +43,7 @@
         {% for guide in guides %}
         <tr class="{% if not guide.live %}is-hidden{% endif %}">
             <td class="guide-table__title">
-                {% if guide.live %}<a href="{{ guide.url }}" target="_blank">{{ guide.draft_title }}</a>{% elif guide.is_draft %}<a href="{% url 'dashboard:preview' guide.pk %}" target="_blank" title="Преглед">{{ guide.draft_title }}</a>{% else %}{{ guide.draft_title }}{% endif %}
+                {% if guide.live %}<a href="{{ guide.url }}">{{ guide.draft_title }}</a>{% elif guide.is_draft %}<a href="{% url 'dashboard:preview' guide.pk %}" target="_blank" title="Преглед">{{ guide.draft_title }}</a>{% else %}{{ guide.draft_title }}{% endif %}
                 {% if guide.is_pinned %}<span class="badge badge--campaign">Важно</span>{% endif %}
             </td>
             <td>{{ guide.department.title }}{% with parent=guide.get_parent %}{% if parent.pk != guide.department.pk %} › {{ parent.title }}{% endif %}{% endwith %}</td>

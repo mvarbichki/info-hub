@@ -56,7 +56,7 @@
                 <thead><tr><th>Търсено</th><th>Пъти</th></tr></thead>
                 <tbody>
                 {% for item in searches %}
-                <tr><td class="guide-table__title"><a href="{% url 'search' %}?q={{ item.query|urlencode }}" target="_blank">{{ item.query }}</a></td><td>{{ item.total }}</td></tr>
+                <tr><td class="guide-table__title"><a href="{% url 'search' %}?q={{ item.query|urlencode }}">{{ item.query }}</a></td><td>{{ item.total }}</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -98,7 +98,7 @@
         {% for guide in guides %}
         <tr>
             <td class="guide-table__title">
-                <a href="{{ guide.url }}" target="_blank">{{ guide.title }}</a>
+                <a href="{{ guide.url }}">{{ guide.title }}</a>
                 {% if guide.no_votes > guide.yes_votes %}<span class="status status--pending">За преглед</span>{% endif %}
             </td>
             <td>{{ guide.department.title }}</td>

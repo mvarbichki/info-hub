@@ -44,7 +44,7 @@
             <td>{{ category.guide_count }}</td>
             <td>{% if category.live %}<span class="status status--live">Видима</span>{% else %}<span class="status status--hidden">Чернова – не се вижда</span>{% endif %}</td>
             <td class="actions">
-                {% if category.live %}<a href="{{ category.url }}" target="_blank">Отвори</a>
+                {% if category.live %}<a href="{{ category.url }}">Отвори</a>
                 {% else %}<form method="post" action="{% url 'dashboard:publish_category' category.pk %}">{% csrf_token %}<button type="submit" class="link-button">Покажи на сайта</button></form>{% endif %}
                 {% if category.guide_count %}
                 <span class="muted" title="Първо преместете или изтрийте публикациите в нея">Изтрий</span>

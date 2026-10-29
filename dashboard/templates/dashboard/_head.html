@@ -4,7 +4,7 @@
         {% if managed_title %}<p class="dash-head__sub">Вие управлявате: <b>{{ managed_title }}</b></p>{% endif %}
     </div>
     <div class="dash-head__links">
-        <a href="/" target="_blank">Отвори сайта ↗</a>
+        <a href="/">Отвори сайта</a>
         {% if request.user.is_superuser %}<a href="/admin/">Разширени настройки</a>{% endif %}
         <a href="{% url 'dashboard:password' %}">Смени парола</a>
         <form method="post" action="{% url 'dashboard:logout' %}">{% csrf_token %}<button type="submit" class="link-button">Изход ({{ request.user.username }})</button></form>

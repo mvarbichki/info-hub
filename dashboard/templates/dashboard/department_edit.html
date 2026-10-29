@@ -9,7 +9,7 @@
 
 <section class="panel">
     <h1 class="panel__title">{{ department.title }}</h1>
-    <p class="muted">Адрес: <a href="{{ department.url }}" target="_blank">/{{ department.slug }}/</a> (не се променя, за да работят старите връзки)</p>
+    <p class="muted">Адрес: <a href="{{ department.url }}">/{{ department.slug }}/</a> (не се променя, за да работят старите връзки)</p>
     <form method="post">
         {% csrf_token %}
         {% include "dashboard/_department_fields.html" %}

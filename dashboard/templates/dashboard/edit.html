@@ -16,7 +16,7 @@
             <h1 class="panel__title">{% if guide %}Редакция{% else %}Нова публикация{% endif %}</h1>
             <span class="panel__links">
             {% if guide.is_draft %}<span class="status status--pending">Чернова: не се вижда на сайта</span>
-            {% elif guide.live %}<a href="{{ guide.url }}" target="_blank">Отвори на сайта ↗</a>
+            {% elif guide.live %}<a href="{{ guide.url }}">Отвори на сайта</a>
             {% elif guide %}<span class="status status--hidden">Архивирана: не се вижда на сайта</span>{% endif %}
             {% if has_draft %}<a href="{% url 'dashboard:preview' guide.pk %}" target="_blank">Преглед на черновата ↗</a>{% endif %}
             </span>

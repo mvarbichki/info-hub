@@ -10,7 +10,7 @@
     <div class="panel__head">
         <h2>Прочитания: {{ guide.draft_title }}</h2>
         <span class="panel__links">
-            {% if guide.live %}<a href="{{ guide.url }}" target="_blank">Отвори на сайта ↗</a>{% endif %}
+            {% if guide.live %}<a href="{{ guide.url }}">Отвори на сайта</a>{% endif %}
             <a href="{% url 'dashboard:update' guide.pk %}">Редактирай</a>
             <a href="{% url 'dashboard:index' %}">← Към списъка</a>
         </span>

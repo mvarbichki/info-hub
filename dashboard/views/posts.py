@@ -119,7 +119,7 @@ def edit(request, pk=None):
                     return redirect("dashboard:update", saved.pk)
                 if saved.live:
                     messages.success(request, format_html(
-                        "{}: <a href=\"{}\" target=\"_blank\">{}</a>. Вижда се от: {}.",
+                        "{}: <a href=\"{}\">{}</a>. Вижда се от: {}.",
                         "Запазено" if page else "Публикувано", saved.url, saved.title, summary(GuidePage.objects.get(pk=saved.pk)),
                     ))
                 else:

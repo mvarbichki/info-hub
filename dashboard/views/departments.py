@@ -29,7 +29,7 @@ def departments(request):
             form.add_error("slug", str(error))
         else:
             messages.success(request, format_html(
-                "Разделът <a href=\"{}\" target=\"_blank\">{}</a> е създаден. Добавете му потребител в „Потребители“.",
+                "Разделът <a href=\"{}\">{}</a> е създаден. Добавете му потребител в „Потребители“.",
                 department.url, department.title,
             ))
             return redirect("dashboard:departments")

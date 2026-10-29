@@ -33,7 +33,7 @@
                 </form>
             </td>
             <td class="guide-table__title"><span class="swatch dept--{{ d.color }}" aria-hidden="true"></span>{{ d.title }}</td>
-            <td><a href="{{ d.url }}" target="_blank">/{{ d.slug }}/</a></td>
+            <td><a href="{{ d.url }}">/{{ d.slug }}/</a></td>
             <td class="nowrap">{{ d.active_count }} на сайта{% if d.inactive_count %} · {{ d.inactive_count }} архивирани{% endif %}{% if d.draft_count %} · {{ d.draft_count }} чернови{% endif %}</td>
             <td>{{ d.category_count }}</td>
             <td>{% if d.usernames %}{{ d.usernames|join:", " }}{% else %}<a href="{% url 'dashboard:users' %}">+ добави</a>{% endif %}</td>
