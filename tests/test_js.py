@@ -1,5 +1,5 @@
-"""The site's JavaScript in jsdom: the post editor, the „Кой да я вижда“ picker and the „Нов потребител“
-form. The pages are rendered here from the test database, then tests/js/*.test.js runs on them.
+"""The site's JavaScript in jsdom: the post editor, the „Кой да я вижда“ picker, the „Нов потребител“
+form and a PDF shown inside a post. The pages are rendered here from the test database, then tests/js/*.test.js runs on them.
 
 Needs Node.js and, once, `npm install` in tests/js (skipped otherwise)."""
 
@@ -67,6 +67,15 @@ class BrowserScriptTests(InfoHubTestCase):
         self.save("edit.html", client.get(f"/manage/{guide.pk}/"))
         self.save("new.html", client.get("/manage/new/"))
         print("\n  editor.test.js:", self.run_node("editor.test.js"))
+
+    def test_pdf_in_the_page(self):
+        client = self.client_for(self.marketing_editor)
+        pdf = self.upload(client, SimpleUploadedFile("p.pdf", b"%PDF-1.4"), "file")[1]["item"]
+        xlsx = self.upload(client, SimpleUploadedFile("t.xlsx", b"PK"), "file")[1]["item"]
+        body = [{"type": "file", "document": pdf, "title": "Правилник за работа"}, {"type": "file", "document": xlsx}]
+        _, guide = self.save_post(client, title="С PDF", body=json.dumps(body))
+        self.save("guide.html", self.client_for(self.pernik_staff).get(guide.url))
+        print("\n  site.test.js:", self.run_node("site.test.js"))
 
     def test_new_user_form(self):
         Venue.objects.create(name="София – Цариградско шосе")

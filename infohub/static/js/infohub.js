@@ -50,3 +50,18 @@ document.addEventListener("click", function (event) {
         done();
     });
 })();
+
+// A PDF in a post is also shown inside the page, where the browser can do that (computers). Phones
+// can't show a PDF in a page (Android: nothing, iPhone: first page only), so there only the button stays.
+(function () {
+    var wide = window.matchMedia && window.matchMedia("(min-width: 700px)").matches;
+    if (!navigator.pdfViewerEnabled || !wide) return;
+    document.querySelectorAll("[data-pdf-view]").forEach(function (box) {
+        var frame = document.createElement("iframe");
+        frame.src = box.dataset.pdfView + "#view=FitH";
+        frame.title = box.dataset.title || "PDF";
+        frame.loading = "lazy";
+        box.appendChild(frame);
+        box.hidden = false;
+    });
+})();

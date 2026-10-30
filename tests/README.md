@@ -21,7 +21,7 @@ names what broke. One part only: `manage.py test tests.test_audience` (file) or
 | `test_panel.py` | Потребители, Обекти, password sheet, Раздели (incl. ↑ ↓ order), Категории, Статистика, login-name suggestions |
 | `test_edges.py` | Edge cases: hostile text in titles/captions/names shown as text everywhere, login `next` to other sites ignored, odd search input, unknown ids, length limits, section order, `/django-admin/` gone |
 | `test_settings.py` | Error log, 500 page, MariaDB check, setup commands |
-| `test_js.py` + `js/` | The site's JavaScript (editor, „Кой да я вижда“, „Нов потребител“) in jsdom on freshly rendered pages |
+| `test_js.py` + `js/` | The site's JavaScript (editor, „Кой да я вижда“, „Нов потребител“, PDF inside a post) in jsdom on freshly rendered pages |
 
 The JavaScript tests need [Node.js](https://nodejs.org/) and, once: `cd tests\js` → `npm install`.
 Without them those two tests are skipped (the rest still run).

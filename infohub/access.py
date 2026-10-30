@@ -103,6 +103,8 @@ def serve_media(request, path):
 
     response["Cache-Control"] = "private, max-age=604800"  # replaced files get new names
     response["X-Content-Type-Options"] = "nosniff"
+    if content_type == "application/pdf":
+        response["X-Frame-Options"] = "SAMEORIGIN"  # shown inside a post (infohub.js); else DENY
     if not content_type.startswith(INLINE_TYPES):
         response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(os.path.basename(full_path))}"
     return response

@@ -460,8 +460,16 @@ class FilesTests(InfoHubTestCase):
         self.assertNotIn("Content-Disposition", response)
         self.assertEqual(response["X-Content-Type-Options"], "nosniff")
         self.assertTrue(response["Cache-Control"].startswith("private"))
+        self.assertEqual(response["X-Frame-Options"], "SAMEORIGIN")  # shown inside the post
         response = self.staff.get(Document.objects.get(pk=self.xlsx["id"]).url)
         self.assertTrue(response["Content-Disposition"].startswith("attachment"))
+        self.assertEqual(response["X-Frame-Options"], "DENY")
+
+    def test_a_pdf_gets_a_place_in_the_page(self):
+        page = self.staff.get(GuidePage.objects.get(title="С файлове").url).content.decode()
+        pdf_url = Document.objects.get(pk=self.pdf["id"]).url
+        self.assertIn(f'data-pdf-view="{pdf_url}"', page)
+        self.assertEqual(page.count("data-pdf-view="), 1)  # not for the Excel file
 
     def test_no_way_out_of_the_media_folder(self):
         for url in ("/media/../manage.py", "/media/%2e%2e/db.sqlite3", "/media/images/none.png", "/media/..%2fmanage.py"):

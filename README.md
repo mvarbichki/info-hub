@@ -19,7 +19,7 @@ copy with fictional venues and content.
 **For venue staff** (read-only accounts, one per venue and role, logged in on the venue PCs for a year)
 - A home page built around one search box. Search finds Bulgarian word forms (принтер / принтера / принтерът) and suggests what other venues search for most.
 - **„Нови за вас“ (New for you):** every new post waits on the venue's home page until someone there opens it; important ones until they confirm **„Прочетох“ (I have read it)**.
-- Step-by-step guides with screenshots, videos and downloadable forms; a print view; „Did this help? Yes / No“ feedback.
+- Step-by-step guides with screenshots, videos and downloadable forms (PDFs also shown inside the page); a print view; „Did this help? Yes / No“ feedback.
 - Venue managers additionally see posts meant only for managers. Nothing else is visible: a post or file outside a user's audience simply does not exist for them (404).
 
 **For the departments** (editors of IT, the casino management system, Marketing, HR)
