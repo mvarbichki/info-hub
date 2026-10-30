@@ -26,7 +26,7 @@ const boxes = d.querySelectorAll("[data-pdf-view]");
 check("one PDF box in the page (none for Excel)", boxes.length === 1, boxes.length);
 const frame = boxes[0].querySelector("iframe");
 check("computer: the PDF is shown in the page", frame && !boxes[0].hidden);
-check("frame opens the PDF fitted to the width", frame && frame.src.endsWith(".pdf#view=FitH") && frame.src.includes("/media/documents/"), frame && frame.src);
+check("frame opens the PDF fitted to the width, without the viewer's toolbar", frame && frame.src.endsWith(".pdf#toolbar=0&view=FitH") && frame.src.includes("/media/documents/"), frame && frame.src);
 check("frame has the button text as title", frame && frame.title === "Правилник за работа", frame && frame.title);
 check("frame loads lazily", frame && frame.loading === "lazy");
 check("download button still there", d.querySelectorAll("a.file-link").length === 2);
@@ -37,11 +37,6 @@ d = load(false, 1280);
 check("browser without a PDF viewer: no frame", !d.querySelector("[data-pdf-view] iframe"));
 d = load(undefined, 1280);
 check("older browser (no pdfViewerEnabled): no frame", !d.querySelector("[data-pdf-view] iframe"));
-// The PDF copy of a Word/Excel file (no LibreOffice in the tests, so the box is marked here as the template does):
-// no viewer toolbar, whose download would save the PDF instead of the file to fill in.
-d = load(true, 1280, (html) => html.replace("data-pdf-view=", "data-pdf-copy data-pdf-view="));
-const copy = d.querySelector("[data-pdf-copy] iframe");
-check("a copy of a Word/Excel file is shown without the viewer's toolbar", copy && copy.src.endsWith("#toolbar=0&view=FitH"), copy && copy.src);
 
 // „Помогна ли ви?“: „Не“ asks for a reason first and is sent only with one.
 function feedbackPage(answer) {

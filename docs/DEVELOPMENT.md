@@ -60,7 +60,7 @@ video, note (info / tip / warning) and file. In the code a section is a *departm
 | `venues/` | Venues, venue accounts, login-name suggestions, passwords |
 | `search/views.py`, `search/variants.py` | Search (substring match that works with Bulgarian word endings); a word that finds nothing is retried in the other keyboard layouts (phonetic, БДС, ЙЦУКЕН), as Latin-to-Cyrillic, then as close words from the posts the user may see (typos) |
 | `stats/` | Views, „Помогна ли ви?“ votes („Не“ needs a reason, shown in Статистика), searches per venue; „Нови за вас“ and „Прочетох“ per account |
-| `guides/previews.py` | PDF copies of Word/Excel/PowerPoint uploads (`DocumentPreview`), made with LibreOffice (`INFOHUB_SOFFICE`: "" = find it, a path, or "off"); shown in the post like a PDF but without the viewer's toolbar (`#toolbar=0`, so its download can't hand out the PDF instead of the original to fill in), served with the file's access check; `manage.py make_previews` for older files |
+| `guides/previews.py` | PDF copies of Word/Excel/PowerPoint uploads (`DocumentPreview`), made with LibreOffice (`INFOHUB_SOFFICE`: "" = find it, a path, or "off"); shown in the post like a PDF (every in-page PDF is shown without the viewer's toolbar, `#toolbar=0`: larger page, and a copy's download can't hand out the PDF instead of the original to fill in), served with the file's access check; `manage.py make_previews` for older files |
 | `dashboard/views/history.py` | История of a post (Wagtail revisions + page log; older versions open in the editor with `?revision=`) and „Последни промени“ |
 | `infohub/static/js/` | `editor.js` (block editor on Quill 2), `audience.js` (audience picker), `dashboard.js`, `infohub.js` |
 | `infohub/static/css/infohub.css` | All styling |

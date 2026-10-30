@@ -111,7 +111,6 @@ class PreviewTests(InfoHubTestCase):
         html = self.html(self.client_for(self.pernik_staff).get(self.guide.url))
         self.assertIn(f'data-pdf-view="{self.document.preview.file.url}"', html)
         self.assertIn(f'href="{self.document.url}" download', html)
-        self.assertIn("data-pdf-copy", html)  # shown without the viewer's own download button
         self.assertIn("изтеглете го с бутона по-долу (DOCX)", html)
         self.assertIn("DOCX (оригинал)", html)
 

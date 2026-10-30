@@ -1,9 +1,9 @@
 {% comment %}A file to download: a PDF, or the PDF copy of a Word/Excel/PowerPoint file (guides/previews.py), is
-also shown in the page by infohub.js where the browser can do that. A copy is shown without the viewer's toolbar,
-so its download button can't hand out the PDF instead of the file to fill in. Needs `document`, optional `label`.{% endcomment %}
+also shown in the page by infohub.js where the browser can do that (without the viewer's toolbar; the button below
+gives the file itself). A copy says so, since its file is the one to fill in. Needs `document`, optional `label`.{% endcomment %}
 {% with preview=document.preview %}
 {% if document.file_extension|lower == "pdf" or preview %}
-<div class="pdf-view" data-pdf-view="{% if preview %}{{ preview.file.url }}{% else %}{{ document.url }}{% endif %}" data-title="{{ label|default:document.title }}"{% if preview %} data-pdf-copy{% endif %} hidden>{% if preview %}<p class="pdf-view__hint">Преглед. За да попълните или редактирате файла, изтеглете го с бутона по-долу ({{ document.file_extension|upper }}).</p>{% endif %}</div>
+<div class="pdf-view" data-pdf-view="{% if preview %}{{ preview.file.url }}{% else %}{{ document.url }}{% endif %}" data-title="{{ label|default:document.title }}" hidden>{% if preview %}<p class="pdf-view__hint">Преглед. За да попълните или редактирате файла, изтеглете го с бутона по-долу ({{ document.file_extension|upper }}).</p>{% endif %}</div>
 {% endif %}
 <p>
     <a class="file-link" href="{{ document.url }}" download>

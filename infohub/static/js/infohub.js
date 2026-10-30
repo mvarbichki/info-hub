@@ -100,8 +100,9 @@ document.addEventListener("click", function (event) {
     if (!navigator.pdfViewerEnabled || !wide) return;
     document.querySelectorAll("[data-pdf-view]").forEach(function (box) {
         var frame = document.createElement("iframe");
-        // A PDF copy of a Word/Excel file: no viewer toolbar, whose download would save the PDF, not the original.
-        frame.src = box.dataset.pdfView + ("pdfCopy" in box.dataset ? "#toolbar=0&view=FitH" : "#view=FitH");
+        // No viewer toolbar: the page fills the width (the toolbar's panels made it small), and for the copy
+        // of a Word/Excel file its download would save the PDF; the button under it gives the file itself.
+        frame.src = box.dataset.pdfView + "#toolbar=0&view=FitH";
         frame.title = box.dataset.title || "PDF";
         frame.loading = "lazy";
         box.appendChild(frame);
