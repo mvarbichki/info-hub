@@ -278,7 +278,7 @@ are not affected, because they live in Docker volumes.
 
 The image contains LibreOffice (about 500 MB), which makes the PDF copies of Word, Excel and
 PowerPoint files that posts show in the page. Files uploaded before that get their copies with
-`docker compose exec web python manage.py make_previews` (once; new uploads get them by themselves).
+`docker compose exec web python manage.py make_previews` (once; new uploads get them by themselves; `--all` remakes the existing copies too, e.g. after a change in how they are made).
 Without LibreOffice (e.g. shared hosting) these files simply stay download-only.
 
 To check the database and the uploaded files after an update, a move or a restore (read-only, changes nothing):

@@ -3,9 +3,11 @@
 import io
 import json
 import os
+import re
 from pathlib import Path
 from unittest import mock, skipUnless
 
+import openpyxl
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import override_settings
@@ -106,6 +108,12 @@ class PreviewTests(InfoHubTestCase):
         self.assertEqual(command[0], "soffice")
         self.assertIn("--headless", command)
         self.assertTrue(any(part.startswith("-env:UserInstallation=file:") for part in command))
+        self.assertEqual(command[command.index("--convert-to") + 1], "pdf")
+
+    def test_a_spreadsheet_keeps_each_sheet_on_one_page(self):
+        self.upload(self.editor, SimpleUploadedFile("Таблица.xlsx", b"PK excel"), "file")
+        command = self.run.call_args.args[0]
+        self.assertIn('"SinglePageSheets"', command[command.index("--convert-to") + 1])
 
     def test_the_post_shows_the_copy_and_downloads_the_original(self):
         html = self.html(self.client_for(self.pernik_staff).get(self.guide.url))
@@ -165,6 +173,13 @@ class PreviewTests(InfoHubTestCase):
             call_command("make_previews", stdout=io.StringIO(), stderr=err)
             self.assertIn("Няма LibreOffice", err.getvalue())
 
+    def test_command_can_remake_every_copy(self):
+        old = self.document.preview.pk
+        out = io.StringIO()
+        call_command("make_previews", "--all", stdout=out)
+        self.assertIn("PDF копия: 1 от 1", out.getvalue())
+        self.assertNotEqual(DocumentPreview.objects.get(document=self.document).pk, old)
+
 
 @skipUnless(libreoffice_here(), "LibreOffice is not installed here (the Docker image has it)")
 class RealLibreOfficeTests(InfoHubTestCase):
@@ -178,3 +193,16 @@ class RealLibreOfficeTests(InfoHubTestCase):
         preview = DocumentPreview.objects.get(document_id=item["id"])
         with preview.file.open("rb") as f:
             self.assertEqual(f.read(5), b"%PDF-")
+
+    def test_a_wide_table_stays_one_page(self):
+        """Printed onto A4 this sheet would be cut into several pages; the copy shows it whole."""
+        book = openpyxl.Workbook()
+        for row in range(1, 81):
+            book.active.append([f"Ред {row} колона {column}" for column in range(1, 26)])
+        data = io.BytesIO()
+        book.save(data)
+        with override_settings(INFOHUB_SOFFICE=libreoffice_here()):
+            upload = SimpleUploadedFile("Голяма таблица.xlsx", data.getvalue())
+            item = self.upload(self.client_for(self.marketing_editor), upload, "file")[1]["item"]
+        with DocumentPreview.objects.get(document_id=item["id"]).file.open("rb") as f:
+            self.assertEqual(len(re.findall(rb"/Type\s*/Page(?!s)", f.read())), 1)

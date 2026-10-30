@@ -20,6 +20,9 @@ from .models import DocumentPreview
 logger = logging.getLogger(__name__)
 
 CONVERTIBLE = {"doc", "docx", "odt", "rtf", "xls", "xlsx", "ods", "ppt", "pptx", "odp"}
+SPREADSHEETS = {"xls", "xlsx", "ods"}
+# A sheet on one page of its own size: printed onto A4, a wide table is cut into several pages.
+WHOLE_SHEETS = 'pdf:calc_pdf_Export:{"SinglePageSheets":{"type":"boolean","value":"true"}}'
 # A large spreadsheet may take a while; after this the file stays download-only.
 TIMEOUT_SECONDS = 120
 WINDOWS_PATH = Path("C:/Program Files/LibreOffice/program/soffice.exe")
@@ -48,7 +51,8 @@ def make_preview(document):
             shutil.copyfileobj(original, copy)
         command = [
             program, f"-env:UserInstallation={(folder / 'profile').as_uri()}",  # own profile: runs in parallel
-            "--headless", "--norestore", "--convert-to", "pdf", "--outdir", str(folder), str(source),
+            "--headless", "--norestore",
+            "--convert-to", WHOLE_SHEETS if extension in SPREADSHEETS else "pdf", "--outdir", str(folder), str(source),
         ]
         try:
             subprocess.run(command, capture_output=True, timeout=TIMEOUT_SECONDS, check=False)

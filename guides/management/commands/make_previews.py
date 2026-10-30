@@ -7,11 +7,15 @@ from guides.previews import CONVERTIBLE, make_preview, soffice
 class Command(BaseCommand):
     help = "PDF копия на Word/Excel/PowerPoint файловете, които още нямат (напр. качени преди тази функция)."
 
-    def handle(self, *args, **options):
+    def add_arguments(self, parser):
+        parser.add_argument("--all", action="store_true", help="Направи наново и съществуващите копия.")
+
+    def handle(self, *args, all=False, **options):
         if soffice() is None:
             self.stderr.write("Няма LibreOffice (INFOHUB_SOFFICE): PDF копия не могат да се направят.")
             return
-        missing = [d for d in Document.objects.filter(preview__isnull=True) if d.file_extension.lower() in CONVERTIBLE]
+        documents = Document.objects.all() if all else Document.objects.filter(preview__isnull=True)
+        missing = [d for d in documents if d.file_extension.lower() in CONVERTIBLE]
         made = 0
         for document in missing:
             if make_preview(document):
