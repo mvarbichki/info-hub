@@ -111,6 +111,16 @@ class PreviewTests(InfoHubTestCase):
         html = self.html(self.client_for(self.pernik_staff).get(self.guide.url))
         self.assertIn(f'data-pdf-view="{self.document.preview.file.url}"', html)
         self.assertIn(f'href="{self.document.url}" download', html)
+        self.assertIn("data-pdf-copy", html)  # shown without the viewer's own download button
+        self.assertIn("изтеглете го с бутона по-долу (DOCX)", html)
+        self.assertIn("DOCX (оригинал)", html)
+
+    def test_the_button_gives_the_file_to_fill_in(self):
+        """The download is the uploaded Word file itself, never the PDF copy."""
+        response = self.client_for(self.pernik_staff).get(self.document.url)
+        self.assertEqual(b"".join(response.streaming_content if response.streaming else [response.content]), b"PK word")
+        self.assertTrue(response["Content-Disposition"].startswith("attachment"))
+        self.assertIn(".docx", response["Content-Disposition"])
 
     def test_only_who_may_see_the_post_opens_the_copy(self):
         url = self.document.preview.file.url

@@ -223,6 +223,7 @@ h1, h2, h3 { line-height: 1.25; }
 .file-link:hover { border-color: var(--primary); }
 .file-link small { color: var(--muted); font-weight: 400; }
 .pdf-view { margin: 16px 0 8px; }
+.pdf-view__hint { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
 .search-meant { margin: 0 0 4px; }
 .pdf-view iframe { display: block; width: 100%; height: 80vh; min-height: 480px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
 

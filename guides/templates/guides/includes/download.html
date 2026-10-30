@@ -1,13 +1,14 @@
 {% comment %}A file to download: a PDF, or the PDF copy of a Word/Excel/PowerPoint file (guides/previews.py), is
-also shown in the page by infohub.js where the browser can do that. Needs `document`, optional `label`.{% endcomment %}
+also shown in the page by infohub.js where the browser can do that. A copy is shown without the viewer's toolbar,
+so its download button can't hand out the PDF instead of the file to fill in. Needs `document`, optional `label`.{% endcomment %}
 {% with preview=document.preview %}
 {% if document.file_extension|lower == "pdf" or preview %}
-<div class="pdf-view" data-pdf-view="{% if preview %}{{ preview.file.url }}{% else %}{{ document.url }}{% endif %}" data-title="{{ label|default:document.title }}" hidden></div>
+<div class="pdf-view" data-pdf-view="{% if preview %}{{ preview.file.url }}{% else %}{{ document.url }}{% endif %}" data-title="{{ label|default:document.title }}"{% if preview %} data-pdf-copy{% endif %} hidden>{% if preview %}<p class="pdf-view__hint">Преглед. За да попълните или редактирате файла, изтеглете го с бутона по-долу ({{ document.file_extension|upper }}).</p>{% endif %}</div>
 {% endif %}
-{% endwith %}
 <p>
     <a class="file-link" href="{{ document.url }}" download>
         <span>{{ label|default:document.title }}</span>
-        <small>{{ document.file_extension|upper }}{% if document.file_size %} · {{ document.file_size|filesizeformat }}{% endif %}</small>
+        <small>{{ document.file_extension|upper }}{% if preview %} (оригинал){% endif %}{% if document.file_size %} · {{ document.file_size|filesizeformat }}{% endif %}</small>
     </a>
 </p>
+{% endwith %}

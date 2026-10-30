@@ -100,7 +100,8 @@ document.addEventListener("click", function (event) {
     if (!navigator.pdfViewerEnabled || !wide) return;
     document.querySelectorAll("[data-pdf-view]").forEach(function (box) {
         var frame = document.createElement("iframe");
-        frame.src = box.dataset.pdfView + "#view=FitH";
+        // A PDF copy of a Word/Excel file: no viewer toolbar, whose download would save the PDF, not the original.
+        frame.src = box.dataset.pdfView + ("pdfCopy" in box.dataset ? "#toolbar=0&view=FitH" : "#view=FitH");
         frame.title = box.dataset.title || "PDF";
         frame.loading = "lazy";
         box.appendChild(frame);

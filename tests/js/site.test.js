@@ -10,8 +10,9 @@ function check(name, ok, detail) {
     if (ok) { passed++; console.log("OK   " + name); }
     else { failed.push(name); console.log("FAIL " + name + (detail !== undefined ? "  -> " + JSON.stringify(detail) : "")); }
 }
-function load(pdfViewer, width) {
-    const html = fs.readFileSync(path.join(path.resolve(process.argv[3]), "guide.html"), "utf8").replace(/<script src=[^>]*><\/script>/g, "");
+function load(pdfViewer, width, change) {
+    let html = fs.readFileSync(path.join(path.resolve(process.argv[3]), "guide.html"), "utf8").replace(/<script src=[^>]*><\/script>/g, "");
+    if (change) html = change(html);
     const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://testserver/" });
     const w = dom.window;
     if (pdfViewer !== undefined) Object.defineProperty(w.navigator, "pdfViewerEnabled", { value: pdfViewer });
@@ -36,6 +37,11 @@ d = load(false, 1280);
 check("browser without a PDF viewer: no frame", !d.querySelector("[data-pdf-view] iframe"));
 d = load(undefined, 1280);
 check("older browser (no pdfViewerEnabled): no frame", !d.querySelector("[data-pdf-view] iframe"));
+// The PDF copy of a Word/Excel file (no LibreOffice in the tests, so the box is marked here as the template does):
+// no viewer toolbar, whose download would save the PDF instead of the file to fill in.
+d = load(true, 1280, (html) => html.replace("data-pdf-view=", "data-pdf-copy data-pdf-view="));
+const copy = d.querySelector("[data-pdf-copy] iframe");
+check("a copy of a Word/Excel file is shown without the viewer's toolbar", copy && copy.src.endsWith("#toolbar=0&view=FitH"), copy && copy.src);
 
 // „Помогна ли ви?“: „Не“ asks for a reason first and is sent only with one.
 function feedbackPage(answer) {
