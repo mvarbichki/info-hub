@@ -67,6 +67,10 @@ def save_upload(uploaded, kind, collection, user):
     document = Document(title=PurePath(uploaded.name).stem[:255], collection=collection, uploaded_by_user=user)
     document.file.save(PurePath(uploaded.name).name, uploaded, save=False)
     document.save()
+    if kind == "file":
+        from .previews import make_preview
+
+        make_preview(document)  # Word/Excel/PowerPoint: a PDF copy to show in the post
     return document, warning
 
 

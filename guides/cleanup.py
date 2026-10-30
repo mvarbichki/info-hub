@@ -21,11 +21,11 @@ from wagtail.models import Collection, Page, ReferenceIndex, Revision
 
 from home.models import SiteBranding
 
-from .models import DepartmentMedia, DepartmentPage, GuidePage
+from .models import DepartmentMedia, DepartmentPage, DocumentPreview, GuidePage
 
 # Something uploaded in the last day may belong to a post that is still being written.
 GRACE = timedelta(days=1)
-MEDIA_FOLDERS = ("original_images", "images", "documents")
+MEDIA_FOLDERS = ("original_images", "images", "documents", "previews")
 
 
 def upload_collections():
@@ -60,9 +60,9 @@ def unused_media():
 
 
 def stray_files():
-    """Files in the media folders that no image, rendition or document points to (older than a day)."""
+    """Files in the media folders that no image, rendition, document or PDF copy points to (older than a day)."""
     known = set()
-    for model in (Image, Rendition, Document):
+    for model in (Image, Rendition, Document, DocumentPreview):
         known.update(Path(name).as_posix() for name in model.objects.values_list("file", flat=True))
     cutoff = (timezone.now() - GRACE).timestamp()
     root = Path(settings.MEDIA_ROOT)

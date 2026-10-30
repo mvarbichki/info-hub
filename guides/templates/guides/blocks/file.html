@@ -1,12 +1,1 @@
-{% if value.document %}
-{% if value.document.file_extension|lower == "pdf" %}
-{# Filled with the PDF by infohub.js where the browser shows PDFs in a page (not on phones). #}
-<div class="pdf-view" data-pdf-view="{{ value.document.url }}" data-title="{{ value.title|default:value.document.title }}" hidden></div>
-{% endif %}
-<p>
-    <a class="file-link" href="{{ value.document.url }}" download>
-        <span>{{ value.title|default:value.document.title }}</span>
-        <small>{{ value.document.file_extension|upper }}{% if value.document.file_size %} · {{ value.document.file_size|filesizeformat }}{% endif %}</small>
-    </a>
-</p>
-{% endif %}
+{% if value.document %}{% include "guides/includes/download.html" with document=value.document label=value.title %}{% endif %}

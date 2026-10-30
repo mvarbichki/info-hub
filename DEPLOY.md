@@ -276,6 +276,11 @@ Note: `deploy/nginx.conf` allows uploads up to 320 MB. If you raise `INFOHUB_LIM
 Database changes (migrations) are applied automatically on start. Content and uploads
 are not affected, because they live in Docker volumes.
 
+The image contains LibreOffice (about 500 MB), which makes the PDF copies of Word, Excel and
+PowerPoint files that posts show in the page. Files uploaded before that get their copies with
+`docker compose exec web python manage.py make_previews` (once; new uploads get them by themselves).
+Without LibreOffice (e.g. shared hosting) these files simply stay download-only.
+
 ## Error log
 
 Server errors (with the full traceback of the failed page) and security warnings go to the

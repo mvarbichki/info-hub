@@ -50,7 +50,8 @@ class BrowserScriptTests(InfoHubTestCase):
         video = upload(SimpleUploadedFile("v.mp4", b"x" * 2000), "video")
         pdf = upload(SimpleUploadedFile("f.pdf", b"%PDF"), "file")
         body = [
-            {"type": "step", "title": "Стъпка А", "html": "<p>Текст <b>удебелен</b></p><ol><li>едно</li></ol>", "images": pictures[:2]},
+            {"type": "step", "title": "Стъпка А", "html": "<p>Текст <b>удебелен</b></p><ol><li>едно</li></ol>", "images": pictures[:2],
+             "files": [pdf]},
             {"type": "step", "title": "Стъпка Б", "html": "", "images": []},
             {"type": "heading", "text": "Раздел"},
             {"type": "step", "title": "Стъпка В", "html": "<p>x</p>", "images": []},

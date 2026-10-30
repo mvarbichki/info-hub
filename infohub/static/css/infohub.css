@@ -480,6 +480,11 @@ a.button-primary { display: inline-block; text-decoration: none; padding: 10px 2
 .epics-field { display: grid; gap: 8px; }
 .epics-field__add { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
+.efiles-field { display: grid; gap: 8px; margin-top: 10px; }
+.efiles { display: grid; gap: 6px; }
+.efile { display: flex; align-items: center; gap: 4px; padding: 8px 12px; border: 1px dashed var(--primary-light); border-radius: 8px; background: var(--primary-soft); word-break: break-word; }
+.efile .efile__remove { margin-left: auto; border: 0; background: none; cursor: pointer; font-size: 16px; color: var(--muted); }
+.efile--loading { display: block; }
 .edoc { display: grid; gap: 8px; }
 .edoc__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px dashed var(--primary-light); border-radius: 8px; background: var(--primary-soft); }
 .edoc__info { min-width: 0; word-break: break-word; }

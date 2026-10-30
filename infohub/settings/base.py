@@ -286,6 +286,10 @@ INFOHUB_LIMITS_MB = {
     "image": 15,
     "file": 50,  # PDF, Excel, ...
 }
+# LibreOffice for the PDF copies of Word/Excel/PowerPoint files (guides/previews.py):
+# "" = find it (soffice on the PATH, or the usual Windows folder), a path, or "off".
+INFOHUB_SOFFICE = os.environ.get("INFOHUB_SOFFICE", "")
+
 # Wider pictures are shrunk on upload (the site shows them at most 2000px wide).
 INFOHUB_IMAGE_MAX_WIDTH = 2000
 

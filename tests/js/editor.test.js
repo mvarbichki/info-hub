@@ -71,6 +71,7 @@ function fileEvent(w, type, files, prop) {
     check("edit: rich text loaded into Quill", first.querySelector(".ql-editor strong") && first.querySelector(".ql-editor strong").textContent === "удебелен");
     check("edit: first block ↑ disabled, last ↓ disabled", first.querySelectorAll(".eblock__tool")[0].disabled && blocksOf(d)[8].querySelectorAll(".eblock__tool")[1].disabled);
     check("edit: video name shown", blocksOf(d)[6].querySelector(".edoc__info strong").textContent.endsWith(".mp4"));
+    check("edit: a step's files restored", [...blocksOf(d)[0].querySelectorAll(".efile strong")].map((x) => x.textContent).join() === "f.pdf", [...blocksOf(d)[0].querySelectorAll(".efile")].map((x) => x.textContent));
     check("edit: a small file's size in KB, not „0.0 MB“", /· 1 KB/.test(blocksOf(d)[8].querySelector(".edoc__info").textContent), blocksOf(d)[8].querySelector(".edoc__info").textContent);
     check("edit: a 2000-byte video is 2 KB", /· 2 KB/.test(blocksOf(d)[6].querySelector(".edoc__info").textContent), blocksOf(d)[6].querySelector(".edoc__info").textContent);
     check("edit: note style selected + coloured", blocksOf(d)[7].querySelector("select").value === "tip" && blocksOf(d)[7].dataset.style === "tip");
@@ -189,6 +190,55 @@ function fileEvent(w, type, files, prop) {
     check("serialize: video with id 21", res.body.some((b) => b.type === "video" && b.document && b.document.id === 21));
     check("serialize: picture block with id 14", res.body.some((b) => b.type === "image" && b.image && b.image.id === 14));
     check("submit: button shows 'Запазване…'", d.querySelector("[data-submit]").textContent === "Запазване…");
+}
+
+
+// ---------- files inside a step ----------
+{
+    const { w, d, sent } = load("new.html");
+    d.querySelector("[data-add=step]").click();
+    const step = blocksOf(d)[0];
+    const button = [...step.querySelectorAll("button")].find((x) => x.textContent === "+ Добави файл");
+    check("step files: „+ Добави файл“ button in a new step", !!button && !button.disabled);
+    check("step files: empty list hidden", step.querySelector(".efiles").hidden === true);
+    const input = step.querySelector(".efiles-field input[type=file]");
+    check("step files: input takes several of the allowed types", input.multiple && /\.pdf/.test(input.accept) && /\.xlsx/.test(input.accept) && !/\.mp4/.test(input.accept));
+    Object.defineProperty(input, "files", { value: [file(w, "Бланка.xlsx", ""), file(w, "Правила.pdf", "application/pdf")], configurable: true });
+    input.dispatchEvent(new w.Event("change"));
+    check("step files: each uploaded as kind=file", sent.length === 2 && sent.every((x) => x.data.get("kind") === "file"));
+    check("step files: progress rows while uploading", step.querySelectorAll(".efile--loading").length === 2);
+    sent[0].respond(200, { item: { id: 41, title: "Бланка", name: "Бланка.xlsx", size: 2048 }, warning: "" });
+    sent[1].respond(200, { item: { id: 42, title: "Правила", name: "Правила.pdf", size: 3 * 1048576 }, warning: "" });
+    const rows = [...step.querySelectorAll(".efile")];
+    check("step files: names and sizes shown", rows.length === 2 && /Бланка\.xlsx · 2 KB/.test(rows[0].textContent) && /Правила\.pdf · 3\.0 MB/.test(rows[1].textContent), rows.map((r) => r.textContent));
+
+    // drop a Word file, a picture and a video onto the step
+    const n = blocksOf(d).length;
+    step.dispatchEvent(fileEvent(w, "drop", [file(w, "Писмо.docx", ""), file(w, "s.png", "image/png"), file(w, "clip.mp4", "video/mp4")], "dataTransfer"));
+    const kinds = sent.slice(2).map((x) => x.data.get("kind")).sort().join();
+    check("drop on a step: Word -> its files, picture -> its pictures, video -> a new video block",
+        kinds === "file,image,video" && blocksOf(d).length === n + 1 && step.nextElementSibling.classList.contains("eblock--video"), [kinds, labels(d)]);
+    sent.slice(2).forEach((x) => {
+        const kind = x.data.get("kind");
+        x.respond(200, { item: kind === "image" ? { id: 50, title: "s", thumb: "/media/images/s.png" } : { id: kind === "file" ? 43 : 51, title: "x", name: "x", size: 10 }, warning: "" });
+    });
+
+    step.querySelectorAll(".efile__remove")[1].click();  // drop „Правила.pdf“
+    step.querySelector("input.eblock__title").value = "Попълнете";
+    const res = submit(w, d);
+    check("step files: serialized in order, removed one gone", res.body[0].files.map((f) => f.id).join() === "41,43", res.body[0].files);
+    check("step files: pictures unchanged", res.body[0].images.map((i) => i.id).join() === "50");
+}
+{
+    const { d, sent } = load("new.html");
+    d.querySelector("[data-add=step]").click();
+    const step = blocksOf(d)[0];
+    const input = step.querySelector(".efiles-field input[type=file]");
+    Object.defineProperty(input, "files", { value: [new d.defaultView.File(["x"], "a.pdf", { type: "application/pdf" })], configurable: true });
+    input.dispatchEvent(new d.defaultView.Event("change"));
+    sent[0].respond(200, { item: { id: 61, title: "a", name: "a.pdf", size: 10 }, warning: "" });
+    const res = submit(d.defaultView, d);
+    check("step files: a step with only a file is not empty", res.body.length === 1 && res.body[0].files[0].id === 61, res.body);
 }
 
 

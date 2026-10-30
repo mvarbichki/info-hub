@@ -40,6 +40,7 @@ class StepBlock(blocks.StructBlock):
     title = blocks.CharBlock(label="Какво да се направи", required=False)
     text = blocks.RichTextBlock(label="Подробности", required=False, features=SIMPLE_TEXT_FEATURES)
     images = blocks.ListBlock(ImageChooserBlock(), label="Снимки към стъпката", default=[])
+    files = blocks.ListBlock(DocumentChooserBlock(), label="Файлове към стъпката", default=[])
 
     class Meta:
         icon = "list-ol"

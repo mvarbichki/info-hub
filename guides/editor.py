@@ -1,7 +1,7 @@
 """The post editor in /manage/: its list of blocks <-> the guide's StreamField body.
 
 The editor works with a flat list of blocks, sent as JSON:
-    {"type": "step", "title": "...", "html": "<p>...</p>", "images": [{"id": 5}, ...]}
+    {"type": "step", "title": "...", "html": "<p>...</p>", "images": [{"id": 5}, ...], "files": [{"id": 9}, ...]}
     {"type": "text", "html": "..."}            {"type": "heading", "text": "..."}
     {"type": "image", "image": {"id": 5}, "caption": "..."}
     {"type": "video", "document": {"id": 7}, "caption": "..."}
@@ -75,6 +75,7 @@ def to_editor(body):
                     "title": step["title"],
                     "html": expand_db_html(step["text"].source) if step["text"] else "",
                     "images": [describe(image) for image in step["images"] if image],
+                    "files": [describe(document) for document in step.get("files") or [] if document],
                 })
         elif block.block_type == "image" and value["image"]:
             blocks.append({"type": "image", "image": describe(value["image"]), "caption": value["caption"]})
@@ -106,8 +107,11 @@ def media_ids(blocks):
     """(image ids, document ids) the blocks refer to."""
     images, documents = [], []
     for block in blocks:
-        if block.get("type") == "step" and isinstance(block.get("images"), list):
-            images += [_media_id(i) for i in block["images"]]
+        if block.get("type") == "step":
+            if isinstance(block.get("images"), list):
+                images += [_media_id(i) for i in block["images"]]
+            if isinstance(block.get("files"), list):
+                documents += [_media_id(d) for d in block["files"]]
         elif block.get("type") == "image":
             images.append(_media_id(block.get("image")))
         elif block.get("type") in ("video", "file"):
@@ -155,9 +159,11 @@ def to_body(blocks, images, documents):
         kind = block.get("type")
         if kind == "step":
             raw_images = block.get("images") if isinstance(block.get("images"), list) else []
+            raw_files = block.get("files") if isinstance(block.get("files"), list) else []
             step = {"title": _line(block.get("title")), "text": RichText(clean_html(block.get("html"))),
-                    "images": [found for found in map(image, raw_images) if found]}
-            if step["title"] or step["text"].source or step["images"]:
+                    "images": [found for found in map(image, raw_images) if found],
+                    "files": [found for found in map(document, raw_files) if found]}
+            if step["title"] or step["text"].source or step["images"] or step["files"]:
                 steps.append(step)
             continue
 

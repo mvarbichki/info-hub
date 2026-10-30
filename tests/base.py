@@ -35,6 +35,7 @@ def png(width=300, height=200, color="red", name="snimka.png", image_format="PNG
     MEDIA_ROOT=MEDIA_ROOT,
     ALLOWED_HOSTS=["testserver"],
     PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"],  # fast; real hashing is Django's job
+    INFOHUB_SOFFICE="off",  # no LibreOffice per upload; tests/test_previews.py switches it on
 )
 class InfoHubTestCase(TestCase):
     @classmethod

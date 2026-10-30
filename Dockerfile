@@ -8,6 +8,13 @@ RUN useradd --create-home wagtail
 
 WORKDIR /app
 
+# LibreOffice makes the PDF copies of Word/Excel/PowerPoint files that posts show in the page
+# (guides/previews.py); fonts with Cyrillic letters for them.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc libreoffice-impress \
+       fonts-dejavu-core fonts-liberation2 fonts-crosextra-carlito fonts-crosextra-caladea \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

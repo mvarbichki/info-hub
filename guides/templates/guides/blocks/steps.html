@@ -14,6 +14,11 @@
             {% endif %}{% endfor %}
         </div>
         {% endif %}
+        {% if step.files %}
+        <div class="step__files">
+            {% for document in step.files %}{% if document %}{% include "guides/includes/download.html" with document=document label="" %}{% endif %}{% endfor %}
+        </div>
+        {% endif %}
     </li>
     {% endfor %}
 </ol>

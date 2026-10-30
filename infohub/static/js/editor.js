@@ -260,6 +260,66 @@
         };
     }
 
+    // The files of a step (PDF, Word, Excel…; several, in order). Videos go in a video block.
+    function stepFilesField(items, block) {
+        var list = h("div", { class: "efiles" });
+        var input = h("input", { type: "file", multiple: true, hidden: true,
+            accept: config.fileTypes.map(function (e) { return "." + e; }).join(",") });
+        var button = h("button", { type: "button", class: "button-secondary button-small", text: "+ Добави файл",
+            onclick: function () { input.click(); } });
+        var hint = h("span", { class: "muted small", text: "PDF, Word, Excel… до " + config.limits.file + " MB" });
+
+        function row(item) {
+            var node = h("div", { class: "efile" }, [
+                h("strong", { text: item.name || item.title }),
+                h("span", { class: "muted small", text: item.size ? " · " + formatMb(item.size) : "" }),
+                h("button", { type: "button", class: "efile__remove", title: "Махни файла", "aria-label": "Махни файла", text: "✕",
+                    onclick: function () { node.remove(); changed(); update(); } })
+            ]);
+            node._item = item;
+            return node;
+        }
+        function current() {
+            return Array.prototype.filter.call(list.children, function (node) { return node._item; });
+        }
+        function update() { list.hidden = !list.children.length; }
+        // Uploads the files that aren't pictures or videos; returns the ones it did not take.
+        function add(files) {
+            var mine = files.filter(function (f) { return !isImage(f) && !isVideo(f); });
+            mine.forEach(function (file) {
+                var bar = progressBar();
+                var placeholder = h("div", { class: "efile efile--loading" }, [bar.node]);
+                list.appendChild(placeholder);
+                update();
+                block.clearMessages();
+                upload(file, "file", {
+                    progress: bar.update,
+                    done: function (item) {
+                        if (placeholder.parentNode) list.replaceChild(row(item), placeholder);
+                        update();
+                    },
+                    fail: function (message) {
+                        placeholder.remove();
+                        update();
+                        block.message(message);
+                    }
+                });
+            });
+            return files.filter(function (f) { return mine.indexOf(f) < 0; });
+        }
+        input.addEventListener("change", function () {
+            add(Array.prototype.slice.call(input.files));
+            input.value = "";
+        });
+        items.forEach(function (item) { if (item && item.id) list.appendChild(row(item)); });
+        update();
+        return {
+            node: h("div", { class: "efiles-field" }, [list, h("div", { class: "epics-field__add" }, [button, hint]), input]),
+            add: add,
+            items: function () { return current().map(function (n) { return n._item; }); }
+        };
+    }
+
     // The video of a video block, or the file of a file block.
     function documentField(kind, item, block) {
         var accept = kind === "video" ? "video/*,.mp4,.m4v,.webm,.mov"
@@ -322,18 +382,24 @@
         step: function (block, data) {
             var title = textInput(data.title, "Какво да се направи, напр. „Отворете Настройки“", "eblock__title");
             var pictures = picturesField(data.images || [], block, false);
+            var attached = stepFilesField(data.files || [], block);
             var text = richText(data.html, "Подробности (по желание)", function (files) { block.files(files); });
             block.body.appendChild(title);
             block.body.appendChild(text.node);
             block.body.appendChild(pictures.node);
+            block.body.appendChild(attached.node);
             text.mount();
             block.files = function (files) {
-                var rest = pictures.add(files);
+                var rest = attached.add(pictures.add(files));  // videos: a video block below
                 if (rest.length) addFileBlocks(rest, block);
             };
             block.focus = function () { title.focus(); };
-            block.serialize = function () { return { type: "step", title: title.value, html: text.html(), images: pictures.items() }; };
-            block.isEmpty = function () { return !title.value.trim() && !text.html() && !pictures.items().length; };
+            block.serialize = function () {
+                return { type: "step", title: title.value, html: text.html(), images: pictures.items(), files: attached.items() };
+            };
+            block.isEmpty = function () {
+                return !title.value.trim() && !text.html() && !pictures.items().length && !attached.items().length;
+            };
         },
         text: function (block, data) {
             var text = richText(data.html, "Текст…", function (files) { addFileBlocks(files, block); });

@@ -109,6 +109,17 @@ class DepartmentMedia(models.Model):
         verbose_name = "Папка на раздел"
 
 
+class DocumentPreview(models.Model):
+    """A PDF copy of an uploaded Word/Excel/PowerPoint file (guides/previews.py), shown in the post
+    like a PDF. Served with the same checks as the file itself; deleted with it."""
+
+    document = models.OneToOneField("wagtaildocs.Document", on_delete=models.CASCADE, related_name="preview")
+    file = models.FileField(upload_to="previews/")
+
+    class Meta:
+        verbose_name = "PDF копие на файл"
+
+
 class CategoryPage(Page):
     description = models.CharField("Кратко описание", max_length=255, blank=True)
 

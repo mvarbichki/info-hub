@@ -64,6 +64,7 @@ def _may_open(user, path):
     """Content managers open every file; anybody else only the files of posts they may see."""
     from dashboard.access import is_editor
     from guides.audience import visible_media
+    from guides.models import DocumentPreview
     from wagtail.documents.models import Document
     from wagtail.images.models import Image, Rendition
 
@@ -73,6 +74,7 @@ def _may_open(user, path):
     image_ids = set(Image.objects.filter(file=path).values_list("pk", flat=True))
     image_ids |= set(Rendition.objects.filter(file=path).values_list("image_id", flat=True))
     document_ids = set(Document.objects.filter(file=path).values_list("pk", flat=True))
+    document_ids |= set(DocumentPreview.objects.filter(file=path).values_list("document_id", flat=True))
     return bool(image_ids & images or document_ids & documents)
 
 
