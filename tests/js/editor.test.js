@@ -230,6 +230,21 @@ function fileEvent(w, type, files, prop) {
     check("step files: pictures unchanged", res.body[0].images.map((i) => i.id).join() === "50");
 }
 {
+    // A chooser switched to „All files“: nothing picked there is lost, it goes where it belongs.
+    const { w, d, sent } = load("new.html");
+    d.querySelector("[data-add=step]").click();
+    const step = blocksOf(d)[0];
+    const pick = (selector, files) => {
+        const input = step.querySelector(selector);
+        Object.defineProperty(input, "files", { value: files, configurable: true });
+        input.dispatchEvent(new w.Event("change"));
+    };
+    pick(".efiles-field input[type=file]", [file(w, "s.png", "image/png")]);
+    check("„+ Добави файл“ with a picture: goes to the step's pictures", sent.length === 1 && sent[0].data.get("kind") === "image" && step.querySelectorAll(".epic--loading").length === 1);
+    pick(".epics-field input[type=file]", [file(w, "Бланка.pdf", "application/pdf")]);
+    check("„+ Добави снимки“ with a PDF: goes to the step's files", sent.length === 2 && sent[1].data.get("kind") === "file" && step.querySelectorAll(".efile--loading").length === 1);
+}
+{
     const { d, sent } = load("new.html");
     d.querySelector("[data-add=step]").click();
     const step = blocksOf(d)[0];

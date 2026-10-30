@@ -248,7 +248,8 @@
             return rest;
         }
         input.addEventListener("change", function () {
-            add(Array.prototype.slice.call(input.files));
+            // Through the block, like a drop: a file picked with „All files“ goes where it belongs.
+            block.files(Array.prototype.slice.call(input.files));
             input.value = "";
         });
         items.forEach(function (item) { if (item && item.thumb) grid.appendChild(tile(item)); });
@@ -308,7 +309,7 @@
             return files.filter(function (f) { return mine.indexOf(f) < 0; });
         }
         input.addEventListener("change", function () {
-            add(Array.prototype.slice.call(input.files));
+            block.files(Array.prototype.slice.call(input.files));  // a picture or video picked here: see above
             input.value = "";
         });
         items.forEach(function (item) { if (item && item.id) list.appendChild(row(item)); });
