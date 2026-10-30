@@ -33,11 +33,14 @@ def check_inactive_room(department, title):
 
 
 def _media_of(page):
-    """Media ids of a guide: the published version and the latest (maybe archived) one."""
+    """Media ids of a guide in any of its versions: the published one and every saved revision, so an
+    older version can be brought back with its pictures (История). cleanup_media removes them once
+    no revision uses them any more (revisions are kept 90 days)."""
     media = {"images": set(), "documents": set()}
-    for version in (page, page.get_latest_revision_as_object()):
+    versions = [page.uploaded_media] + [c.get("uploaded_media") or {} for c in page.revisions.values_list("content", flat=True)]
+    for used in versions:
         for key in media:
-            media[key].update(version.uploaded_media.get(key, []))
+            media[key].update(used.get(key, []))
     return media
 
 
@@ -131,9 +134,7 @@ def save_guide(*, user, page=None, parent, title, summary, kind, is_pinned, pinn
         elif not page.live:
             _store_listing(page)  # a live post's row keeps its published version until publishing
 
-    # What the post no longer uses. Wagtail removes the files from disk.
-    Image.objects.filter(pk__in=old_media["images"]).exclude(pk__in=[i.pk for i in images]).delete()
-    Document.objects.filter(pk__in=old_media["documents"]).exclude(pk__in=[d.pk for d in documents]).delete()
+    # Media the post no longer uses stay for its older versions (see _media_of).
     return GuidePage.objects.get(pk=page.pk)  # as stored now (live, first published, …)
 
 
@@ -148,8 +149,9 @@ def set_visible(page, visible, user):
         page.unpublish(user=user)
 
 
-def delete_guide(page):
+def delete_guide(page, user=None):
+    """Delete the post with the media of all its versions; the history (Последни промени) says who."""
     media = _media_of(page.specific)
-    page.delete()
+    page.delete(user=user, skip_permission_checks=True)
     Image.objects.filter(pk__in=media["images"]).delete()
     Document.objects.filter(pk__in=media["documents"]).delete()

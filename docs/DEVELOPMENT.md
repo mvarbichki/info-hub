@@ -58,8 +58,9 @@ video, note (info / tip / warning) and file. In the code a section is a *departm
 | `guides/management/commands/` | `setup_infohub`, `add_department`, `cleanup_media`, `export_site`, `import_site` |
 | `dashboard/` | The `/manage/` panel: one view module per tab, forms, templates |
 | `venues/` | Venues, venue accounts, login-name suggestions, passwords |
-| `search/views.py` | Search (substring match that works with Bulgarian word endings) |
-| `stats/` | Views, „Помогна ли ви?“ votes, searches per venue; „Нови за вас“ and „Прочетох“ per account |
+| `search/views.py`, `search/variants.py` | Search (substring match that works with Bulgarian word endings); a word that finds nothing is retried in the other keyboard layouts (phonetic, БДС, ЙЦУКЕН), as Latin-to-Cyrillic, then as close words from the posts the user may see (typos) |
+| `stats/` | Views, „Помогна ли ви?“ votes („Не“ needs a reason, shown in Статистика), searches per venue; „Нови за вас“ and „Прочетох“ per account |
+| `dashboard/views/history.py` | История of a post (Wagtail revisions + page log; older versions open in the editor with `?revision=`) and „Последни промени“ |
 | `infohub/static/js/` | `editor.js` (block editor on Quill 2), `audience.js` (audience picker), `dashboard.js`, `infohub.js` |
 | `infohub/static/css/infohub.css` | All styling |
 | `deploy/`, `Dockerfile`, `docker-compose*.yml` | nginx, Caddy, container start and backup scripts |

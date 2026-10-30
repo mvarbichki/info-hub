@@ -16,7 +16,7 @@ from wagtail.images.models import Image
 from guides.cleanup import unused_media
 from guides.departments import department_collection
 from guides.models import GuidePage
-from stats.models import GuideStat
+from stats.models import GuideStat, Vote
 
 from .base import InfoHubTestCase, png
 
@@ -147,7 +147,7 @@ class SaveTests(InfoHubTestCase):
         _, second = self.save_post(self.editor, title="Каса", summary="втора")
         self.assertEqual({p.slug for p in GuidePage.objects.filter(title="Каса")}, {"kasa", "kasa-2"})
 
-    def test_edit_keeps_address_and_deletes_removed_media(self):
+    def test_edit_keeps_address_and_old_versions_keep_their_media(self):
         _, guide = self.save_full()
         blocks = self.editor_config(self.editor.get(f"/manage/{guide.pk}/"))["blocks"]
         self.assertEqual([b["type"] for b in blocks], ["step", "step", "text", "heading", "image", "video", "note", "note", "file", "step"])
@@ -162,11 +162,23 @@ class SaveTests(InfoHubTestCase):
         guide.refresh_from_db()
         self.assertEqual(guide.slug, "printerat-ne-pechata")
         self.assertEqual(guide.body[0].value[0]["title"], "Нов текст")
-        self.assertFalse(Image.objects.filter(pk=self.pictures[0]["id"]).exists())
-        self.assertFalse(Document.objects.filter(pk=self.video["id"]).exists())
+        # Still there for the older version (История) ...
+        self.assertTrue(Image.objects.filter(pk=self.pictures[0]["id"]).exists())
+        self.assertTrue(Document.objects.filter(pk=self.video["id"]).exists())
+        self.assertTrue(Image.objects.filter(pk=self.pictures[1]["id"]).exists())
+        # ... until no saved version uses it (old revisions are purged after 90 days).
+        Image.objects.update(created_at=timezone.now() - timedelta(days=2))
+        Document.objects.update(created_at=timezone.now() - timedelta(days=2))
+        self.assertNotIn(self.pictures[0]["id"], {i.pk for i in unused_media()[0]})
+        guide.revisions.exclude(pk=guide.latest_revision_id).delete()
+        images, documents = unused_media()
+        self.assertIn(self.pictures[0]["id"], {i.pk for i in images})
+        self.assertIn(self.video["id"], {d.pk for d in documents})
+        self.assertNotIn(self.pictures[1]["id"], {i.pk for i in images})
+        with self.captureOnCommitCallbacks(execute=True):
+            call_command("cleanup_media", stdout=io.StringIO())
         for path in dropped_files:
             self.assertFalse(os.path.exists(path), path)
-        self.assertTrue(Image.objects.filter(pk=self.pictures[1]["id"]).exists())
 
     def test_delete_removes_the_post_and_its_media(self):
         _, guide = self.save_full()
@@ -506,9 +518,88 @@ class CountingTests(InfoHubTestCase):
         staff.get(guide.url, HTTP_SEC_PURPOSE="prefetch")
         self.assertEqual(GuideStat.objects.get(guide=guide).views, 1)
         staff.post(f"/feedback/{guide.pk}/", {"helpful": "yes"})
-        staff.post(f"/feedback/{guide.pk}/", {"helpful": "no"})  # second answer ignored
+        staff.post(f"/feedback/{guide.pk}/", {"helpful": "no", "reason": "Липсва снимка"})  # second answer ignored
         stat = GuideStat.objects.get(guide=guide)
         self.assertEqual((stat.helpful, stat.not_helpful), (1, 0))
         self.assertContains(staff.get(guide.url), "Отговорихте „Да“")
         self.assertEqual(staff.post(f"/feedback/{guide.pk}/", {"helpful": "maybe"}).status_code, 400)
         self.assertEqual(staff.get(f"/feedback/{guide.pk}/").status_code, 405)
+
+
+class NotHelpfulTests(InfoHubTestCase):
+    """„Не“ is taken only with a reason; staff then see who to ask, editors see the reasons."""
+
+    def setUp(self):
+        super().setUp()
+        boss = self.client_for(self.admin)
+        boss.post(f"/manage/departments/{self.marketing.pk}/", {
+            "title": self.marketing.title, "description": "", "contact": "Маркетинг: 0888 123 456",
+            "color": self.marketing.color, "icon": self.marketing.icon,
+        })
+        self.editor = self.client_for(self.marketing_editor)
+        _, self.guide = self.save_post(self.editor, title="Томбола")
+        self.staff = self.client_for(self.pernik_staff)
+        self.url = f"/feedback/{self.guide.pk}/"
+        self.ajax = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+
+    def test_the_contact_is_kept_on_the_section(self):
+        self.marketing.refresh_from_db()
+        self.assertEqual(self.marketing.contact, "Маркетинг: 0888 123 456")
+        self.assertContains(self.client_for(self.admin).get(f"/manage/departments/{self.marketing.pk}/"), "Маркетинг: 0888 123 456")
+
+    def test_no_without_a_reason_is_refused(self):
+        for reason in (None, "", "   ", "лошо"):
+            data = {"helpful": "no"} if reason is None else {"helpful": "no", "reason": reason}
+            response = self.staff.post(self.url, data, **self.ajax)
+            self.assertEqual(response.status_code, 400, reason)
+            self.assertIn("без това отговорът „Не“ не се изпраща", response.json()["error"])
+        self.assertFalse(Vote.objects.exists())
+        self.assertFalse(GuideStat.objects.filter(not_helpful__gt=0).exists())
+
+    def test_no_with_a_reason(self):
+        response = self.staff.post(self.url, {"helpful": "no", "reason": "  Няма   снимка\nна бланката  "}, **self.ajax)
+        self.assertEqual(response.json(), {"ok": True})
+        vote = Vote.objects.get()
+        self.assertEqual((vote.helpful, vote.reason), (False, "Няма снимка на бланката"))
+        self.assertEqual(GuideStat.objects.get(guide=self.guide).not_helpful, 1)
+        html = self.html(self.staff.get(self.guide.url))
+        self.assertIn("Отговорихте „Не“", html)
+        self.assertIn("Ако ви трябва помощ сега: <strong>Маркетинг: 0888 123 456</strong>", html)
+        self.staff.post(self.url, {"helpful": "no", "reason": "x" * 2000}, **self.ajax)  # second answer ignored
+        self.assertEqual(Vote.objects.count(), 1)
+
+    def test_a_long_reason_is_cut(self):
+        self.staff.post(self.url, {"helpful": "no", "reason": "я" * 2000}, **self.ajax)
+        self.assertEqual(len(Vote.objects.get().reason), 500)
+
+    def test_yes_needs_no_reason_and_stores_none(self):
+        self.staff.post(self.url, {"helpful": "yes", "reason": "нещо"}, **self.ajax)
+        self.assertEqual((Vote.objects.get().helpful, Vote.objects.get().reason), (True, ""))
+        self.assertNotIn("Ако ви трябва помощ сега", self.html(self.staff.get(self.guide.url)))
+
+    def test_without_javascript(self):
+        response = self.staff.post(self.url, {"helpful": "no", "reason": ""})
+        self.assertEqual(response["Location"], f"{self.guide.url}?feedback=no#feedback")
+        html = self.html(self.staff.get(self.guide.url + "?feedback=no"))
+        self.assertIn('<div class="feedback__ask" hidden>', html)
+        self.assertIn("Какво липсваше или не беше ясно?", html)
+        self.assertIn("Маркетинг: 0888 123 456", html)
+        response = self.staff.post(self.url, {"helpful": "no", "reason": "Липсва краен срок"})
+        self.assertEqual(response["Location"], f"{self.guide.url}?thanks=no#feedback")
+        self.assertTrue(Vote.objects.filter(reason="Липсва краен срок").exists())
+
+    def test_no_contact_no_line(self):
+        _, other = self.save_post(self.client_for(self.admin), title="ИТ пост", place=self.it.pk)
+        self.staff.post(f"/feedback/{other.pk}/", {"helpful": "no", "reason": "Неясно е"}, **self.ajax)
+        self.assertNotIn("Ако ви трябва помощ сега", self.html(self.staff.get(other.url)))
+
+    def test_editors_see_the_reasons(self):
+        self.staff.post(self.url, {"helpful": "no", "reason": "Няма <b>снимка</b>"}, **self.ajax)
+        self.client_for(self.training_staff).post(self.url, {"helpful": "no", "reason": "Само тест"}, **self.ajax)
+        html = self.html(self.editor.get("/manage/stats/"))
+        self.assertIn("Няма &lt;b&gt;снимка&lt;/b&gt;", html)
+        self.assertIn("Перник (служители)", html)
+        self.assertNotIn("Само тест", html)  # the training venue
+        self.assertIn("Няма &lt;b&gt;снимка", self.html(self.editor.get(f"/manage/stats/?venue={self.pernik.pk}")))
+        self.assertNotIn("Няма &lt;b&gt;снимка", self.html(self.editor.get(f"/manage/stats/?venue={self.sah.pk}")))
+        self.assertNotIn("Няма &lt;b&gt;снимка", self.html(self.client_for(self.cms_editor).get("/manage/stats/")))

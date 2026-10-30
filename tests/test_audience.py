@@ -235,6 +235,48 @@ class SearchTests(InfoHubTestCase):
         self.assertTrue(all(len(s.query) <= 100 for s in SearchStat.objects.all()))
 
 
+class ForgivingSearchTests(InfoHubTestCase):
+    """Wrong keyboard layout, Bulgarian in Latin letters and typos still find the post."""
+
+    def setUp(self):
+        super().setUp()
+        self.editor = self.client_for(self.marketing_editor)
+        self.staff = self.client_for(self.pernik_staff)
+        self.save_post(self.editor, title="Принтерът не печата")
+        self.save_post(self.editor, title="Outlook не праща поща")
+
+    def found(self, query):
+        html = self.html(self.staff.get("/search/", {"q": query}))
+        return "Принтерът не печата" in html, "Outlook не праща поща" in html, html
+
+    def test_typed_in_another_layout_or_in_latin(self):
+        for query in ("printer", "ghbynth", "m,rkje,", "PRINTER"):  # phonetic = Latin, ЙЦУКЕН, БДС
+            self.assertEqual(self.found(query)[:2], (True, False), query)
+        self.assertEqual(self.found("щгедщщл")[:2], (False, True))  # "outlook" on the phonetic layout
+        self.assertIn("Показани са резултати за „<strong>принтер</strong>“", self.found("printer")[2])
+
+    def test_typos(self):
+        for query in ("принетр", "пирнтер", "принтерат"):
+            self.assertTrue(self.found(query)[0], query)
+        self.assertFalse(self.found("прн")[0])  # short words: no guessing
+        self.assertIn("Няма резултати", self.found("скенер")[2])
+
+    def test_what_was_typed_wins(self):
+        html = self.found("принтер")[2]
+        self.assertNotIn("Показани са резултати за", html)
+        self.assertIn("Намерени: 1", html)
+
+    def test_guesses_come_only_from_posts_the_viewer_may_see(self):
+        self.save_post(self.editor, title="Тайна инвентаризация", all_venues=None, manager_venues=[self.pernik.pk])
+        self.assertIn("Няма резултати", self.found("инвентаризацйа")[2])
+        manager = self.html(self.client_for(self.pernik_manager).get("/search/", {"q": "инвентаризацйа"}))
+        self.assertIn("Тайна инвентаризация", manager)
+
+    def test_every_word_still_has_to_match(self):
+        self.assertTrue(self.found("printer pechata")[0])
+        self.assertFalse(self.found("printer skener")[0])
+
+
 class CategoryPageTests(InfoHubTestCase):
     def test_category_page_lists_only_what_the_viewer_may_see(self):
         editor = self.client_for(self.marketing_editor)

@@ -58,9 +58,12 @@ class DepartmentPage(Page):
     description = models.CharField("Кратко описание", max_length=255, blank=True)
     color = models.CharField("Цвят", max_length=20, choices=COLOR_CHOICES, default="blue")
     icon = models.CharField("Икона", max_length=20, choices=ICON_CHOICES, default="info")
+    # Shown to staff who answer „Не“ to „Помогна ли ви?“ on one of its posts.
+    contact = models.CharField("Връзка при проблем", max_length=255, blank=True)
 
     content_panels = Page.content_panels + [
         FieldPanel("description"),
+        FieldPanel("contact"),
         FieldRowPanel([FieldPanel("color"), FieldPanel("icon")]),
     ]
 
@@ -258,6 +261,8 @@ class GuidePage(Page):
             context["can_edit"] = is_editor(request.user) and can_manage(request.user, self)
             if is_editor(request.user):
                 context["audience_summary"] = summary(self)
+            if not is_editor(request.user):
+                context["help_department"] = self.department  # „Не“: who to ask
             if is_reader(request.user):
                 context["my_vote"] = Vote.objects.filter(guide=self, user=request.user).values_list("helpful", flat=True).first()
                 if self.needs_ack:

@@ -23,7 +23,8 @@ def departments(request):
         data = form.cleaned_data
         try:
             department, _, _ = create_department(
-                data["title"], data["slug"], data["description"], data["color"], data["icon"], user=request.user
+                data["title"], data["slug"], data["description"], data["color"], data["icon"],
+                contact=data["contact"], user=request.user,
             )
         except DepartmentError as error:
             form.add_error("slug", str(error))
@@ -52,11 +53,12 @@ def edit_department(request, pk):
     department = get_object_or_404(DepartmentPage, pk=pk)
     latest = department.get_latest_revision_as_object()
     form = DepartmentForm(request.POST or None, department=department, initial={
-        "title": latest.title, "description": latest.description, "color": latest.color, "icon": latest.icon,
+        "title": latest.title, "description": latest.description, "contact": latest.contact,
+        "color": latest.color, "icon": latest.icon,
     })
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
-        update_department(department, title=data["title"], description=data["description"],
+        update_department(department, title=data["title"], description=data["description"], contact=data["contact"],
                           color=data["color"], icon=data["icon"], user=request.user)
         messages.success(request, f"Разделът „{data['title']}“ е запазен.")
         return redirect("dashboard:departments")

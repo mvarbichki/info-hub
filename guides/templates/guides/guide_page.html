@@ -59,16 +59,36 @@
     <section class="feedback" id="feedback" data-feedback="{{ page.pk }}">
         {% if my_vote is not None %}
         <p class="feedback__thanks">Помогна ли ви тази публикация? Отговорихте „{{ my_vote|yesno:"Да,Не" }}“. Благодарим!</p>
+        {% if my_vote is False %}{% include "guides/includes/help_contact.html" %}{% endif %}
         {% elif request.GET.thanks %}
         <p class="feedback__thanks">Благодарим за отговора!</p>
+        {% if request.GET.thanks == "no" %}{% include "guides/includes/help_contact.html" %}{% endif %}
         {% else %}
-        <form method="post" action="{% url 'guide_feedback' page.pk %}" class="feedback__form">
+        {% with asking=request.GET.feedback %}
+        <form method="post" action="{% url 'guide_feedback' page.pk %}" class="feedback__form" novalidate>
             {% csrf_token %}
-            <span class="feedback__question">Помогна ли ви тази публикация?</span>
-            <button type="submit" name="helpful" value="yes" class="button-secondary">Да</button>
-            <button type="submit" name="helpful" value="no" class="button-secondary">Не</button>
+            <div class="feedback__ask" {% if asking %}hidden{% endif %}>
+                <span class="feedback__question">Помогна ли ви тази публикация?</span>
+                <button type="submit" name="helpful" value="yes" class="button-secondary">Да</button>
+                <button type="submit" name="helpful" value="no" class="button-secondary" data-feedback-no>Не</button>
+            </div>
+            <div class="feedback__reason" {% if not asking %}hidden{% endif %}>
+                <label for="feedback-reason" class="feedback__question">Какво липсваше или не беше ясно?</label>
+                <textarea id="feedback-reason" name="reason" rows="3" maxlength="500" placeholder="напр. Няма снимка на екрана с грешката"></textarea>
+                <p class="field-error" data-feedback-error {% if not asking %}hidden{% endif %}>Напишете накратко какво липсваше или не беше ясно – без това отговорът „Не“ не се изпраща.</p>
+                <div class="feedback__actions">
+                    <button type="submit" name="helpful" value="no" class="button-primary">Изпрати</button>
+                    <a href="{{ page.url }}#feedback" data-feedback-cancel>Отказ</a>
+                </div>
+                {% include "guides/includes/help_contact.html" %}
+            </div>
         </form>
-        <p class="feedback__thanks" hidden>Благодарим за отговора!</p>
+        {% endwith %}
+        <p class="feedback__thanks" data-feedback-thanks hidden>Благодарим за отговора!</p>
+        <div data-feedback-sent hidden>
+            <p class="feedback__thanks">Благодарим! Бележката ви е изпратена{% if help_department %} на „{{ help_department.title }}“{% endif %}.</p>
+            {% include "guides/includes/help_contact.html" %}
+        </div>
         {% endif %}
     </section>
     {% endif %}

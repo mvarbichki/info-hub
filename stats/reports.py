@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from search.views import matching_guides
 
-from .models import GuideStat, SearchStat
+from .models import GuideStat, SearchStat, Vote
 
 POPULAR_DAYS = 30
 # A search is shown on the public home page only after this many searches, so one-off typos stay out.
@@ -108,6 +108,18 @@ def guide_report(guides, days=POPULAR_DAYS, venue=None):
         yes_votes=Coalesce(Sum("stats__helpful", filter=recent), 0),
         no_votes=Coalesce(Sum("stats__not_helpful", filter=recent), 0),
     ).order_by("-recent_views", "title")
+
+
+def no_reasons(guides, days=POPULAR_DAYS, venue=None, limit=100):
+    """What the venues wrote with „Не“ on these guides, newest first (not the training venue)."""
+    votes = (
+        Vote.objects.filter(helpful=False, day__gte=since(days), guide__in=guides)
+        .exclude(reason="").exclude(user__venue_account__venue__is_training=True)
+        .select_related("guide", "user__venue_account__venue").order_by("-day", "-pk")
+    )
+    if venue is not None:
+        votes = votes.filter(user__venue_account__venue=venue)
+    return list(votes[:limit])
 
 
 def venue_report(venues, days=POPULAR_DAYS, guides=None):

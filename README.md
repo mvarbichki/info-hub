@@ -17,16 +17,17 @@ copy with fictional venues and content.
 ## What it does
 
 **For venue staff** (read-only accounts, one per venue and role, logged in on the venue PCs for a year)
-- A home page built around one search box. Search finds Bulgarian word forms (принтер / принтера / принтерът) and suggests what other venues search for most.
+- A home page built around one search box. Search finds Bulgarian word forms (принтер / принтера / принтерът), forgives the wrong keyboard layout, Latin spelling and typos ("ghbynth", "printer", "принетр" → принтер), and suggests what other venues search for most.
 - **„Нови за вас“ (New for you):** every new post waits on the venue's home page until someone there opens it; important ones until they confirm **„Прочетох“ (I have read it)**.
-- Step-by-step guides with screenshots, videos and downloadable forms (PDFs also shown inside the page); a print view; „Did this help? Yes / No“ feedback.
+- Step-by-step guides with screenshots, videos and downloadable forms (PDFs also shown inside the page); a print view; „Did this help? Yes / No“ feedback, where "No" asks what was missing and shows whom to contact.
 - Venue managers additionally see posts meant only for managers. Nothing else is visible: a post or file outside a user's audience simply does not exist for them (404).
 
 **For the departments** (editors of IT, the casino management system, Marketing, HR)
 - A block editor in the browser: numbered steps with several pictures each, text, subheadings, images, videos, notes and files. Screenshots can be pasted straight from the clipboard (Ctrl+V) or dragged in; every file uploads on its own with a progress bar.
 - **Who sees it:** all venues, the staff of chosen venues (their managers included), or only the managers of chosen venues, picked in one table with a live summary.
 - Drafts with a preview, archive instead of delete, and **„Прочитания“**: which venue has opened and confirmed a post, and who has not yet.
-- Statistics per venue: views, helpful / not helpful, searches with no result (= what is missing), and venues that do not use the site.
+- **History** of every post: who saved, published, archived or deleted what, and any earlier version can be previewed and brought back.
+- Statistics per venue: views, helpful / not helpful with the staff's reasons, searches with no result (= what is missing), and venues that do not use the site.
 
 **For the administrator**
 - Sections (departments), venues and every account in one panel; ↑ ↓ ordering of the sections.

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Последни промени – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="index" %}
+
+<section class="panel">
+    <div class="panel__head">
+        <h2>Последни промени</h2>
+        <span class="panel__links"><a href="{% url 'dashboard:index' %}">← Към списъка</a></span>
+    </div>
+    <p class="muted small">Кой какво е направил с публикациите{% if request.user.is_superuser %}, също с изтритите{% else %} на вашия раздел{% endif %}. Най-новото първо.</p>
+
+    {% if entries %}
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Кога</th><th>Кой</th><th>Какво</th><th>Публикация</th></tr></thead>
+        <tbody>
+        {% for entry in entries %}
+        <tr>
+            <td class="nowrap">{{ entry.when|date:"j.m.Y H:i" }}</td>
+            <td>{{ entry.who }}</td>
+            <td>{{ entry.what }}</td>
+            <td class="guide-table__title">{% if entry.page_id %}<a href="{% url 'dashboard:history' entry.page_id %}">{{ entry.title }}</a>{% else %}{{ entry.title }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% include "includes/pagination.html" with items=rows %}
+    {% else %}
+    <p class="muted">Още няма промени.</p>
+    {% endif %}
+</section>
+{% endblock %}

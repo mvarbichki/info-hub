@@ -98,7 +98,7 @@ class OddRequestsTests(InfoHubTestCase):
     def test_feedback_without_javascript_returns_to_the_post(self):
         _, guide = self.save_post(self.client_for(self.admin), title="Без JS")
         response = self.client_for(self.pernik_staff).post(f"/feedback/{guide.pk}/", {"helpful": "yes"})
-        self.assertEqual(response["Location"], f"{guide.url}?thanks=1#feedback")
+        self.assertEqual(response["Location"], f"{guide.url}?thanks=yes#feedback")
 
     def test_panel_filter_only_live(self):
         boss = self.client_for(self.admin)

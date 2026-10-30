@@ -19,8 +19,10 @@
             {% elif guide.live %}<a href="{{ guide.url }}">Отвори на сайта</a>
             {% elif guide %}<span class="status status--hidden">Архивирана: не се вижда на сайта</span>{% endif %}
             {% if has_draft %}<a href="{% url 'dashboard:preview' guide.pk %}" target="_blank">Преглед на черновата ↗</a>{% endif %}
+            {% if guide %}<a href="{% url 'dashboard:history' guide.pk %}">История</a>{% endif %}
             </span>
         </div>
+        {% if restoring %}<div class="flash flash--warning" role="status">Заредена е по-старата версия от <b>{{ restoring.created_at|date:"j.m.Y H:i" }}</b>{% if restoring.user %} ({{ restoring.user.username }}){% endif %}. Нищо не е променено, докато не натиснете „{% if guide.live %}Публикувай промените{% elif guide.is_draft %}Публикувай{% else %}Запази{% endif %}“{% if guide.live or guide.is_draft %} или „Запази като чернова“{% endif %}. <a href="{% url 'dashboard:update' guide.pk %}">Откажи</a>{% if missing_media %}<br>{{ missing_media }} снимки или файла от тази версия вече ги няма – те липсват и тук.{% endif %}</div>{% endif %}
         {% if form.errors %}<div class="flash flash--error" role="alert">Публикацията <b>не е запазена</b>. Поправете отбелязаното в червено по-долу и натиснете бутона отново.{% if form.non_field_errors %} {{ form.non_field_errors|join:" " }}{% endif %}</div>{% endif %}
 
         <div class="field">

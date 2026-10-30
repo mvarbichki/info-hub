@@ -67,7 +67,7 @@ def _grant_permissions(department, group, collection):
     group.permissions.remove(Permission.objects.get(content_type__app_label="wagtailadmin", codename="access_admin"))
 
 
-def create_department(title, slug="", description="", color="blue", icon="info", user=None):
+def create_department(title, slug="", description="", color="blue", icon="info", contact="", user=None):
     """Create (or reuse, by slug) a department with its group and media collection.
 
     Returns (department, group, created).
@@ -80,7 +80,9 @@ def create_department(title, slug="", description="", color="blue", icon="info",
             slug = slug or unique_slug(home, title)
             if slug in RESERVED_SLUGS:
                 raise DepartmentError(f"Адресът „/{slug}/“ се използва от сайта. Изберете друг.")
-            department = DepartmentPage(title=title, slug=slug, description=description, color=color, icon=icon)
+            department = DepartmentPage(
+                title=title, slug=slug, description=description, color=color, icon=icon, contact=contact
+            )
             home.add_child(instance=department)
             department.save_revision(user=user, log_action=True).publish(user=user)
 
@@ -92,13 +94,16 @@ def create_department(title, slug="", description="", color="blue", icon="info",
     return department, group, created
 
 
-def update_department(department, *, title, description, color, icon, user=None):
-    """Change name, description, colour and icon. The address (slug) stays, so links keep working."""
+def update_department(department, *, title, description, color, icon, contact=None, user=None):
+    """Change name, description, colour, icon and (if given) the contact for „Не“. The address (slug)
+    stays, so links keep working."""
     with transaction.atomic():
         page = department.get_latest_revision_as_object()
         old_title = page.title
         page.title = page.draft_title = title
         page.description, page.color, page.icon = description, color, icon
+        if contact is not None:
+            page.contact = contact
         page.save_revision(user=user, log_action=True).publish(user=user)
         if title != old_title:
             collection = department_collection(department)

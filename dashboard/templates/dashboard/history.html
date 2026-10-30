@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}История – {{ guide.draft_title }}{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="index" %}
+
+<section class="panel">
+    <div class="panel__head">
+        <h2>История: {{ guide.draft_title }}</h2>
+        <span class="panel__links">
+            {% if guide.live %}<a href="{{ guide.url }}">Отвори на сайта</a>{% endif %}
+            <a href="{% url 'dashboard:update' guide.pk %}">Редактирай</a>
+            <a href="{% url 'dashboard:index' %}">← Към списъка</a>
+        </span>
+    </div>
+    <p class="muted small">Всяко запазване е версия. „Зареди в редактора“ отваря по-стара версия в редактора; тя се връща чак когато натиснете „Публикувай промените“ или „Запази като чернова“. Версиите се пазят 90 дни (последната и публикуваната – винаги).</p>
+
+    {% if rows %}
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Кога</th><th>Кой</th><th>Какво</th><th>Версия</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+        <tr>
+            <td class="nowrap">{{ row.when|date:"j.m.Y H:i" }}</td>
+            <td>{{ row.who }}</td>
+            <td>{{ row.what }}</td>
+            <td class="actions">
+                {% if row.revision %}
+                {% if row.revision.pk == live_id %}<span class="status status--live">На сайта сега</span>{% endif %}
+                {% if row.revision.pk == latest_id and row.revision.pk != live_id %}<span class="status status--pending">Последна</span>{% endif %}
+                <a href="{% url 'dashboard:preview' guide.pk %}?revision={{ row.revision.pk }}" target="_blank">Преглед ↗</a>
+                {% if row.revision.pk != latest_id %}<a href="{% url 'dashboard:update' guide.pk %}?revision={{ row.revision.pk }}">Зареди в редактора</a>{% endif %}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="muted">Още няма записана история.</p>
+    {% endif %}
+</section>
+{% endblock %}

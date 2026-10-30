@@ -1,9 +1,9 @@
 """Keep the uploads folder from growing: find media nothing uses any more, and report disk use.
 
-Normal edits already delete what they replace (see publishing.py). This catches the rest:
-files uploaded in the editor but never saved in a post (removed again, or the page was closed),
-media left behind by older code, and files on disk whose database row is gone. Run nightly by
-`manage.py cleanup_media`.
+Deleting a post deletes its media (see publishing.py). This catches the rest: media an edit
+replaced, once no saved version of the post uses it (revisions are kept 90 days), files uploaded in
+the editor but never saved in a post (removed again, or the page was closed), and files on disk
+whose database row is gone. Run nightly by `manage.py cleanup_media`.
 """
 
 import os
@@ -12,11 +12,12 @@ from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Sum
 from django.utils import timezone
 from wagtail.documents.models import Document
 from wagtail.images.models import Image, Rendition
-from wagtail.models import Collection, ReferenceIndex
+from wagtail.models import Collection, Page, ReferenceIndex, Revision
 
 from home.models import SiteBranding
 
@@ -33,12 +34,14 @@ def upload_collections():
 
 
 def used_media():
-    """Image and document ids used by any guide, published or latest (also hidden) version."""
+    """Image and document ids used by any guide: the published version or any saved revision."""
     images, documents = set(), set()
-    for page in GuidePage.objects.all():
-        for version in (page, page.get_latest_revision_as_object()):
-            images.update(version.uploaded_media.get("images", []))
-            documents.update(version.uploaded_media.get("documents", []))
+    versions = list(GuidePage.objects.values_list("uploaded_media", flat=True))
+    revisions = Revision.objects.filter(base_content_type=ContentType.objects.get_for_model(Page))
+    versions += [c.get("uploaded_media") or {} for c in revisions.values_list("content", flat=True)]
+    for used in versions:
+        images.update(used.get("images", []))
+        documents.update(used.get("documents", []))
     images.update(SiteBranding.objects.exclude(logo=None).values_list("logo_id", flat=True))
     return images, documents
 

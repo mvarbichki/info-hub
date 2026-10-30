@@ -6,12 +6,14 @@ from operator import or_
 from django.conf import settings
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.http import JsonResponse
-from django.shortcuts import redirect
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.html import format_html
 from django.views.decorators.http import require_POST
+from wagtail.documents.models import Document
+from wagtail.images.models import Image
 from wagtail.models import Page
 
 from guides.audience import accounts_for, summary
@@ -81,11 +83,31 @@ def _posted_blocks(raw):
         return []
 
 
+def _revision(request, page):
+    """The older version asked for with ?revision=<id> (История), or None."""
+    wanted = request.GET.get("revision", "")
+    if page is None or not wanted:
+        return None
+    if not wanted.isdigit():
+        raise Http404
+    return get_object_or_404(page.revisions.select_related("user"), pk=wanted)
+
+
+def _missing_media(revision):
+    """How many pictures/files of an older version no longer exist."""
+    used = revision.content.get("uploaded_media") or {}
+    images, documents = set(used.get("images", [])), set(used.get("documents", []))
+    return (len(images) - Image.objects.filter(pk__in=images).count()
+            + len(documents) - Document.objects.filter(pk__in=documents).count())
+
+
 @editor_required
 def edit(request, pk=None):
-    """The post editor: a new post (no pk) or an existing one."""
+    """The post editor: a new post (no pk) or an existing one; ?revision=<id> fills it with an older
+    version (История), which is brought back only when it is saved."""
     page = managed_page(request, GuidePage, pk) if pk else None
     latest = page.get_latest_revision_as_object() if page else None
+    revision = _revision(request, page)
     if request.method == "POST":
         form = GuideForm(request.POST, user=request.user)
         blocks = _posted_blocks(request.POST.get("body"))
@@ -126,19 +148,21 @@ def edit(request, pk=None):
                     messages.success(request, f"„{saved.title}“ е запазена. Тя е архивирана и не се вижда на сайта.")
                 return redirect("dashboard:index")
     elif latest is not None:
+        shown = revision.as_object() if revision else latest
+        venues = [v.pk for v in shown.venues.all()]
         form = GuideForm(user=request.user, initial={
-            "title": latest.title,
-            "summary": latest.summary,
+            "title": shown.title,
+            "summary": shown.summary,
             "place": str(page.get_parent().pk),
-            "kind": latest.kind,
-            "is_pinned": latest.is_pinned,
-            "pinned_until": latest.pinned_until,
-            "all_venues": latest.audience == AUDIENCE_ALL,
-            "staff_venues": [v.pk for v in latest.venues.all()] if latest.audience == AUDIENCE_STAFF else [],
-            "manager_venues": [v.pk for v in latest.venues.all()] if latest.audience == AUDIENCE_MANAGERS else [],
-            "needs_ack": latest.needs_ack,
+            "kind": shown.kind,
+            "is_pinned": shown.is_pinned,
+            "pinned_until": shown.pinned_until,
+            "all_venues": shown.audience == AUDIENCE_ALL,
+            "staff_venues": venues if shown.audience == AUDIENCE_STAFF else [],
+            "manager_venues": venues if shown.audience == AUDIENCE_MANAGERS else [],
+            "needs_ack": shown.needs_ack,
         })
-        blocks = to_editor(latest.body)
+        blocks = to_editor(shown.body)
     else:
         # "+ Добави публикация тук" on the site opens the editor with that department/category chosen.
         form = GuideForm(user=request.user, initial={"kind": "guide", "place": request.GET.get("place", "")})
@@ -148,6 +172,8 @@ def edit(request, pk=None):
         "form": form,
         "guide": latest,
         "has_draft": page is not None and (page.is_draft or page.live and page.has_unpublished_changes),
+        "restoring": revision,
+        "missing_media": _missing_media(revision) if revision else 0,
         "venue_rows": _audience_rows(form),
         "audience_errors": [e for name in ("all_venues", "staff_venues", "manager_venues") for e in form[name].errors],
         "editor_config": {
@@ -189,10 +215,12 @@ def upload(request):
 
 @editor_required
 def preview(request, pk):
-    """The latest version (e.g. a draft) as the site would show it, for the editor only."""
+    """The latest version (e.g. a draft), or an older one (?revision=<id>), as the site would show it,
+    for the editor only."""
     page = managed_page(request, GuidePage, pk)
-    latest = page.get_latest_revision_as_object()
-    return latest.make_preview_request(request, latest.default_preview_mode)
+    revision = _revision(request, page)
+    shown = revision.as_object() if revision else page.get_latest_revision_as_object()
+    return shown.make_preview_request(request, shown.default_preview_mode)
 
 
 @editor_required
@@ -242,6 +270,6 @@ def toggle(request, pk):
 def delete(request, pk):
     page = managed_page(request, GuidePage, pk)
     title = page.draft_title
-    delete_guide(page)
+    delete_guide(page, request.user)
     messages.success(request, f"„{title}“ е изтрита.")
     return back_to_list(request)

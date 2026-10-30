@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.template.response import TemplateResponse
 
 from guides.models import GuidePage
-from stats.reports import failed_searches, guide_report, top_searches, venue_report
+from stats.reports import failed_searches, guide_report, no_reasons, top_searches, venue_report
 from venues.models import Venue
 
 from .common import editor_required, head_context
@@ -43,6 +43,7 @@ def stats(request):
         "venue_rows": None if venue else venue_report(venues, days, None if request.user.is_superuser else guides),
         "failed": failed_searches(days, venue=venue),
         "searches": top_searches(days, limit=15, venue=venue),
+        "reasons": no_reasons(guides, days, venue),
         "guides": Paginator(guide_report(guides, days, venue), 50).get_page(request.GET.get("page")),
         "page_params": f"days={days}&department={department_id}&venue={venue_id}",
     })

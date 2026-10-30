@@ -11,7 +11,10 @@
 <section class="panel">
     <div class="panel__head">
         <h2>Публикации</h2>
-        <a href="{% url 'dashboard:new' %}" class="button-primary">+ Нова публикация</a>
+        <span class="panel__links">
+            <a href="{% url 'dashboard:activity' %}">Последни промени</a>
+            <a href="{% url 'dashboard:new' %}" class="button-primary">+ Нова публикация</a>
+        </span>
     </div>
     <div class="panel__head">
         <form method="get" class="list-filter">
@@ -59,6 +62,7 @@
             <td class="actions">
                 <a href="{% url 'dashboard:update' guide.pk %}">Редактирай</a>
                 {% if not guide.is_draft %}<a href="{% url 'dashboard:reads' guide.pk %}">Прочитания</a>{% endif %}
+                <a href="{% url 'dashboard:history' guide.pk %}">История</a>
                 <form method="post" action="{% url 'dashboard:toggle' guide.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="link-button">{% if guide.live %}Архивирай{% elif guide.is_draft %}Публикувай{% else %}Върни на сайта{% endif %}</button></form>
                 <form method="post" action="{% url 'dashboard:delete' guide.pk %}" data-confirm="Да изтрия ли „{{ guide.draft_title }}“ окончателно?">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="link-button link-button--danger">Изтрий</button></form>
             </td>

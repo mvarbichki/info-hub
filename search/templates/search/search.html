@@ -14,6 +14,7 @@
 
 {% if search_query %}
     {% if search_results %}
+    {% if meant %}<p class="search-meant">Показани са резултати за „<strong>{{ meant }}</strong>“ (търсихте „{{ search_query }}“).</p>{% endif %}
     <p class="muted">Намерени: {{ result_count }}</p>
     <div class="card-grid">
         {% for guide in search_results %}{% include "includes/guide_card.html" with show_department=True %}{% endfor %}

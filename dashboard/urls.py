@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from .views import accounts, categories, departments, posts, stats, users, venues
+from .views import accounts, categories, departments, history, posts, stats, users, venues
 
 app_name = "dashboard"
 
@@ -12,6 +12,8 @@ urlpatterns = [
     path("<int:pk>/", posts.edit, name="update"),
     path("<int:pk>/preview/", posts.preview, name="preview"),
     path("<int:pk>/reads/", posts.reads, name="reads"),
+    path("<int:pk>/history/", history.history, name="history"),
+    path("activity/", history.activity, name="activity"),
     path("<int:pk>/toggle/", posts.toggle, name="toggle"),
     path("<int:pk>/delete/", posts.delete, name="delete"),
     path("categories/", categories.categories, name="categories"),

@@ -88,6 +88,30 @@
 {% endif %}
 
 <section class="panel">
+    <h2>Защо не помогна{% if venue %} – {{ venue.name }}{% endif %}</h2>
+    <p class="muted small">Какво са написали обектите, когато са отговорили „Не“ на „Помогна ли ви?“ (без обекта „Обучение“). Поправете публикацията или добавете липсващото.</p>
+    {% if reasons %}
+    <div class="table-wrap">
+    <table class="guide-table">
+        <thead><tr><th>Дата</th><th>Обект</th><th>Публикация</th><th>Какво липсва</th></tr></thead>
+        <tbody>
+        {% for vote in reasons %}
+        <tr>
+            <td class="nowrap">{{ vote.day|date:"j.m.Y" }}</td>
+            <td>{{ vote.user.venue_account.venue.name }} ({% if vote.user.venue_account.role == "manager" %}управител{% else %}служители{% endif %})</td>
+            <td class="guide-table__title"><a href="{{ vote.guide.url }}">{{ vote.guide.title }}</a></td>
+            <td>{{ vote.reason }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="muted">Няма отговори „Не“ с бележка за периода.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
     <h2>Публикации: прочитания и „Помогна ли ви?“{% if venue %} – {{ venue.name }}{% endif %}</h2>
     <p class="muted small">Публикациите на сайта, най-четените първо. Ако „Не“ е повече от „Да“, публикацията е отбелязана – прегледайте я и я направете по-ясна.</p>
     {% if guides %}

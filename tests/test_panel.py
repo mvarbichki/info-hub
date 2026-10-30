@@ -1,10 +1,13 @@
-"""The /manage/ tabs: Потребители, Обекти (incl. the password sheet), Раздели, Категории, Статистика."""
+"""The /manage/ tabs: Потребители, Обекти (incl. the password sheet), Раздели, Категории, Статистика,
+and a post's История / Последни промени."""
 
+import json
 import re
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import Client
+from wagtail.images.models import Image
 
 from dashboard.access import departments_for, is_editor
 from dashboard.models import must_change_password
@@ -12,7 +15,7 @@ from guides.models import CategoryPage, DepartmentPage, GuidePage
 from venues.access import PASSWORD_ALPHABET, login_base, new_password, suggest_username
 from venues.models import Venue, VenueAccount
 
-from .base import PASSWORD, InfoHubTestCase
+from .base import PASSWORD, InfoHubTestCase, png
 
 User = get_user_model()
 
@@ -422,3 +425,78 @@ class PanelExtrasTests(InfoHubTestCase):
 
         with self.assertRaises(CommandError):
             call_command("add_department", "Вход", "login")
+
+
+class HistoryTests(InfoHubTestCase):
+    """История of a post: its versions, who did what, bringing an older version back; Последни промени."""
+
+    def setUp(self):
+        super().setUp()
+        self.editor = self.client_for(self.marketing_editor)
+        self.picture = self.upload(self.editor, png(), "image")[1]["item"]
+        _, self.guide = self.save_post(self.editor, title="Томбола", summary="Първа версия",
+                                       body=json.dumps([{"type": "image", "image": self.picture}]))
+        self.first = self.guide.latest_revision_id
+        self.save_post(self.editor, url=f"/manage/{self.guide.pk}/", title="Томбола", summary="Втора версия",
+                       body=json.dumps([{"type": "text", "html": "<p>без снимка</p>"}]))
+        self.guide.refresh_from_db()
+
+    def test_history_lists_versions_and_who(self):
+        html = self.html(self.editor.get(f"/manage/{self.guide.pk}/history/"))
+        self.assertIn("История: Томбола", html)
+        self.assertEqual(html.count("<td>marketing</td>"), 4)  # saved + published, twice
+        self.assertIn("<td>Публикувана</td>", html)
+        self.assertIn("На сайта сега", html)
+        self.assertIn(f"?revision={self.first}\">Зареди в редактора", html)
+        self.assertNotIn(f"?revision={self.guide.latest_revision_id}\">Зареди", html)  # the current one
+        self.assertEqual(self.client_for(self.cms_editor).get(f"/manage/{self.guide.pk}/history/").status_code, 404)
+        response = self.client_for(self.pernik_staff).get(f"/manage/{self.guide.pk}/history/")
+        self.assertEqual((response.status_code, response["Location"].split("?")[0]), (302, "/login/"))
+
+    def test_an_older_version_comes_back_with_its_picture(self):
+        response = self.editor.get(f"/manage/{self.guide.pk}/?revision={self.first}")
+        html = self.html(response)
+        self.assertIn("Заредена е по-старата версия", html)
+        self.assertIn(">Първа версия</textarea>", html)
+        blocks = self.editor_config(response)["blocks"]
+        self.assertEqual(blocks[0]["image"]["id"], self.picture["id"])
+        self.guide.refresh_from_db()
+        self.assertEqual(self.guide.summary, "Втора версия")  # nothing changed by just looking
+        self.save_post(self.editor, url=f"/manage/{self.guide.pk}/?revision={self.first}", title="Томбола",
+                       summary="Първа версия", body=json.dumps(blocks))
+        self.guide.refresh_from_db()
+        self.assertEqual(self.guide.summary, "Първа версия")
+        self.assertEqual(self.guide.body[0].block_type, "image")
+        page = self.html(self.client_for(self.pernik_staff).get(self.guide.url))
+        self.assertIn(Image.objects.get(pk=self.picture["id"]).title, page)
+
+    def test_preview_of_an_older_version(self):
+        html = self.html(self.editor.get(f"/manage/{self.guide.pk}/preview/?revision={self.first}"))
+        self.assertIn("Първа версия", html)
+        self.assertIn("Втора версия", self.html(self.editor.get(f"/manage/{self.guide.pk}/preview/")))
+
+    def test_bad_revision_ids(self):
+        _, other = self.save_post(self.editor, title="Друга")
+        for wanted in ("abc", "999999", str(other.latest_revision_id)):
+            self.assertEqual(self.editor.get(f"/manage/{self.guide.pk}/?revision={wanted}").status_code, 404, wanted)
+            self.assertEqual(self.editor.get(f"/manage/{self.guide.pk}/preview/?revision={wanted}").status_code, 404, wanted)
+
+    def test_a_missing_picture_is_reported(self):
+        Image.objects.filter(pk=self.picture["id"]).delete()
+        html = self.html(self.editor.get(f"/manage/{self.guide.pk}/?revision={self.first}"))
+        self.assertIn("1 снимки или файла от тази версия вече ги няма", html)
+
+    def test_recent_changes_with_deletes(self):
+        boss = self.client_for(self.admin)
+        _, gone = self.save_post(self.editor, title="За изтриване")
+        self.editor.post(f"/manage/{gone.pk}/toggle/")
+        self.editor.post(f"/manage/{gone.pk}/delete/")
+        html = self.html(boss.get("/manage/activity/"))
+        self.assertIn("<td>Изтрита</td>", html)
+        self.assertIn("<td>Архивирана</td>", html)
+        self.assertIn("За изтриване", html)
+        self.assertIn(f'href="/manage/{self.guide.pk}/history/">Томбола', html)
+        own = self.html(self.editor.get("/manage/activity/"))
+        self.assertIn("Томбола", own)
+        self.assertNotIn("За изтриване", own)  # deleted posts: only the superuser
+        self.assertNotIn("Томбола", self.html(self.client_for(self.cms_editor).get("/manage/activity/")))

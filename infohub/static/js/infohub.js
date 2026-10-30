@@ -30,24 +30,66 @@ document.addEventListener("click", function (event) {
 
 // „Помогна ли ви?“ under a guide: send the answer without leaving the page. The server remembers
 // it per account, so the question isn't shown again (the page still works without JavaScript).
+// „Не“ first asks what was missing; it is sent only with at least a few words.
 (function () {
     var box = document.querySelector("[data-feedback]");
     if (!box) return;
     var form = box.querySelector("form");
-    var thanks = box.querySelector(".feedback__thanks");
-
-    function done() {
-        if (form) form.hidden = true;
-        thanks.hidden = false;
-    }
     if (!form) return;
+    var ask = form.querySelector(".feedback__ask");
+    var why = form.querySelector(".feedback__reason");
+    var reason = form.querySelector("textarea[name=reason]");
+    var error = form.querySelector("[data-feedback-error]");
+    var MIN_LENGTH = 5;  // stats.views.REASON_MIN_LENGTH
+    var NEEDED = error.textContent;
+
+    function show(asking) {
+        ask.hidden = asking;
+        why.hidden = !asking;
+        error.hidden = true;
+        if (asking) reason.focus();
+    }
+    function done(sent) {
+        form.hidden = true;
+        box.querySelector(sent ? "[data-feedback-sent]" : "[data-feedback-thanks]").hidden = false;
+    }
+    function fail(message) {
+        error.textContent = message;
+        error.hidden = false;
+        reason.focus();
+    }
+
+    form.querySelector("[data-feedback-no]").addEventListener("click", function (event) {
+        event.preventDefault();
+        show(true);
+    });
+    form.querySelector("[data-feedback-cancel]").addEventListener("click", function (event) {
+        event.preventDefault();
+        show(false);
+    });
 
     form.addEventListener("submit", function (event) {
         event.preventDefault();
+        var helpful = event.submitter ? event.submitter.value : "yes";
         var data = new FormData(form);
-        data.append("helpful", event.submitter ? event.submitter.value : "yes");
-        fetch(form.action, { method: "POST", body: data, headers: { "X-Requested-With": "XMLHttpRequest" } });
-        done();
+        data.append("helpful", helpful);
+        var headers = { "X-Requested-With": "XMLHttpRequest" };
+        if (helpful === "yes") {
+            data.delete("reason");
+            fetch(form.action, { method: "POST", body: data, headers: headers });
+            done(false);
+            return;
+        }
+        if (reason.value.trim().length < MIN_LENGTH) {
+            fail(NEEDED);
+            return;
+        }
+        fetch(form.action, { method: "POST", body: data, headers: headers }).then(function (response) {
+            if (response.ok) return done(true);
+            return response.json().then(function (answer) { fail(answer.error); });
+        }).catch(function () {
+            fail("Отговорът не можа да се изпрати. Проверете връзката и опитайте пак.");
+        });
     });
 })();
 

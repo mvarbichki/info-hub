@@ -126,6 +126,7 @@ class DepartmentForm(forms.Form):
         help_text="Латиница, напр. finance → /finance/. Празно = от името. После не се сменя.",
     )
     description = forms.CharField(label="Кратко описание", max_length=255, required=False)
+    contact = forms.CharField(label="Връзка при проблем", max_length=255, required=False)
     color = forms.ChoiceField(label="Цвят", choices=COLOR_CHOICES)
     icon = forms.ChoiceField(label="Икона", choices=ICON_CHOICES)
 

@@ -41,6 +41,8 @@ class Vote(models.Model):
     guide = models.ForeignKey("guides.GuidePage", on_delete=models.CASCADE, related_name="+")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
     helpful = models.BooleanField()
+    # With „Не“: what was missing or unclear (required), shown to the editors in Статистика.
+    reason = models.TextField(blank=True, default="")
     day = models.DateField(db_index=True)
 
     class Meta:
