@@ -108,6 +108,7 @@ def edit(request, pk=None):
     page = managed_page(request, GuidePage, pk) if pk else None
     latest = page.get_latest_revision_as_object() if page else None
     revision = _revision(request, page)
+    first_publish = page is None or page.is_draft  # „Публикувано“, not „Запазено“
     if request.method == "POST":
         form = GuideForm(request.POST, user=request.user)
         blocks = _posted_blocks(request.POST.get("body"))
@@ -142,7 +143,7 @@ def edit(request, pk=None):
                 if saved.live:
                     messages.success(request, format_html(
                         "{}: <a href=\"{}\">{}</a>. Вижда се от: {}.",
-                        "Запазено" if page else "Публикувано", saved.url, saved.title, summary(GuidePage.objects.get(pk=saved.pk)),
+                        "Публикувано" if first_publish else "Запазено", saved.url, saved.title, summary(GuidePage.objects.get(pk=saved.pk)),
                     ))
                 else:
                     messages.success(request, f"„{saved.title}“ е запазена. Тя е архивирана и не се вижда на сайта.")

@@ -66,6 +66,7 @@
     function changed() { dirty = true; }
 
     function formatMb(bytes) {
+        if (bytes < MB) return Math.max(1, Math.round(bytes / 1024)) + " KB";  // not „0.0 MB“ for a small PDF
         return (bytes / MB).toFixed(bytes < 10 * MB ? 1 : 0) + " MB";
     }
 

@@ -47,7 +47,10 @@ class DraftTests(InfoHubTestCase):
 
     def test_publishing_a_draft(self):
         _, draft = self.save_post(self.editor, title="Готова", action="draft")
-        self.save_post(self.editor, url=f"/manage/{draft.pk}/", title="Готова", action="publish")
+        response = self.editor.post(f"/manage/{draft.pk}/", self.post_data(title="Готова", action="publish"), follow=True)
+        self.assertContains(response, "Публикувано: <a")  # the first time on the site, not „Запазено“
+        response = self.editor.post(f"/manage/{draft.pk}/", self.post_data(title="Готова", action="publish"), follow=True)
+        self.assertContains(response, "Запазено: <a")  # a change of a live post
         draft.refresh_from_db()
         self.assertTrue(draft.live and draft.first_published_at)
         self.assertEqual(self.staff.get(draft.url).status_code, 200)

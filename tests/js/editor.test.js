@@ -71,6 +71,8 @@ function fileEvent(w, type, files, prop) {
     check("edit: rich text loaded into Quill", first.querySelector(".ql-editor strong") && first.querySelector(".ql-editor strong").textContent === "удебелен");
     check("edit: first block ↑ disabled, last ↓ disabled", first.querySelectorAll(".eblock__tool")[0].disabled && blocksOf(d)[8].querySelectorAll(".eblock__tool")[1].disabled);
     check("edit: video name shown", blocksOf(d)[6].querySelector(".edoc__info strong").textContent.endsWith(".mp4"));
+    check("edit: a small file's size in KB, not „0.0 MB“", /· 1 KB/.test(blocksOf(d)[8].querySelector(".edoc__info").textContent), blocksOf(d)[8].querySelector(".edoc__info").textContent);
+    check("edit: a 2000-byte video is 2 KB", /· 2 KB/.test(blocksOf(d)[6].querySelector(".edoc__info").textContent), blocksOf(d)[6].querySelector(".edoc__info").textContent);
     check("edit: note style selected + coloured", blocksOf(d)[7].querySelector("select").value === "tip" && blocksOf(d)[7].dataset.style === "tip");
     check("edit: empty hint hidden", d.querySelector("[data-empty]").hidden === true);
 

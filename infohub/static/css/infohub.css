@@ -456,7 +456,7 @@ a.button-primary { display: inline-block; text-decoration: none; padding: 10px 2
 .eblock__warning { color: #9a5300; font-weight: 600; }
 
 .eblock__rich .ql-toolbar.ql-snow { border-color: var(--border); border-radius: 8px 8px 0 0; font-family: inherit; }
-.eblock__rich .ql-container.ql-snow { border-color: var(--border); border-radius: 0 0 8px 8px; font: inherit; }
+.eblock__rich .ql-container.ql-snow { border-color: var(--border); border-radius: 0 0 8px 8px; font: inherit; height: auto; } /* Quill's 100% + its toolbar spilled over the pictures below */
 .eblock__rich .ql-editor { min-height: 70px; font-size: 16px; line-height: 1.6; }
 .eblock__rich .ql-editor.ql-blank::before { color: var(--muted); font-style: normal; }
 /* Quill's link box in Bulgarian */
