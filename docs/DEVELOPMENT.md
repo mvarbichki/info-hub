@@ -55,7 +55,7 @@ video, note (info / tip / warning) and file. In the code a section is a *departm
 | `guides/audience.py` | The visibility rule |
 | `guides/editor.py`, `guides/media.py`, `guides/publishing.py` | Editor blocks ⇄ page body (with Wagtail's HTML whitelist), uploads, save / draft / archive / delete |
 | `guides/departments.py` | Create, rename, order and delete sections (page + editors group + media folder) |
-| `guides/management/commands/` | `setup_infohub`, `add_department`, `cleanup_media`, `export_site`, `import_site` |
+| `guides/management/commands/` | `setup_infohub`, `add_department`, `cleanup_media`, `export_site`, `import_site`, `make_previews`, `check_site` (read-only health check of the DB, files and who sees what) |
 | `dashboard/` | The `/manage/` panel: one view module per tab, forms, templates |
 | `venues/` | Venues, venue accounts, login-name suggestions, passwords |
 | `search/views.py`, `search/variants.py` | Search (substring match that works with Bulgarian word endings); a word that finds nothing is retried in the other keyboard layouts (phonetic, БДС, ЙЦУКЕН), as Latin-to-Cyrillic, then as close words from the posts the user may see (typos) |

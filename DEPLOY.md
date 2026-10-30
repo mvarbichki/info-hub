@@ -281,6 +281,11 @@ PowerPoint files that posts show in the page. Files uploaded before that get the
 `docker compose exec web python manage.py make_previews` (once; new uploads get them by themselves).
 Without LibreOffice (e.g. shared hosting) these files simply stay download-only.
 
+To check the database and the uploaded files after an update, a move or a restore (read-only, changes nothing):
+`docker compose exec web python manage.py check_site`. It checks the page tree, sections, every post's
+pictures and files on disk, the PDF copies, the accounts, and that every venue account sees exactly the posts
+(and files) meant for it; it ends with „OK: няма проблеми.“ or lists the problems.
+
 ## Error log
 
 Server errors (with the full traceback of the failed page) and security warnings go to the
