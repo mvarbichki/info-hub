@@ -1,5 +1,5 @@
 """What each venue account has opened (Seen) and what the venues' managers confirmed with
-„Прочетох и запознах екипа“ (Ack).
+„Прочетох и запознах екипа“ / „Прочетох“ (Ack).
 
 Unlike the counters in tracking.py these are per account (an account belongs to a venue, not to a
 person), because they answer "is it new for this PC?" and "did Перник read it?". Only a manager
@@ -11,10 +11,14 @@ from datetime import timedelta
 from django.db.models import Q
 from django.utils import timezone
 
+from guides.models import AUDIENCE_MANAGERS, UNREAD_DAYS
 from venues.access import reader
 from venues.models import MANAGER
 
 from .models import Ack, Seen
+
+# A confirmation counts unless it was a plain „Прочетох“ and the post now asks to brief the team.
+COUNTS = Q(team=True) | Q(guide__audience=AUDIENCE_MANAGERS)
 
 
 def mark_seen(guide, user):
@@ -28,12 +32,15 @@ def confirms(user):
 
 
 def confirm(guide, user):
-    Ack.objects.get_or_create(guide=guide, user=user)
+    ack, created = Ack.objects.get_or_create(guide=guide, user=user, defaults={"team": guide.ack_briefs_team})
+    if not created and guide.ack_briefs_team and not ack.team:  # read only, now asked to brief the team
+        ack.team, ack.at = True, timezone.now()
+        ack.save(update_fields=["team", "at"])
 
 
 def _venue_acks(venue):
     """The confirmations of a venue (by any of its manager accounts)."""
-    return Ack.objects.filter(user__venue_account__venue=venue, user__venue_account__role=MANAGER)
+    return Ack.objects.filter(COUNTS, user__venue_account__venue=venue, user__venue_account__role=MANAGER)
 
 
 def venue_ack(guide, user):
@@ -44,8 +51,6 @@ def venue_ack(guide, user):
 def unread(user, guides):
     """Of `guides` (already filtered to what the user may see): the ones published in the last
     UNREAD_DAYS that the account hasn't opened and, for a manager, every one its venue hasn't confirmed."""
-    from guides.models import UNREAD_DAYS
-
     since = timezone.now() - timedelta(days=UNREAD_DAYS)
     seen = Seen.objects.filter(user=user).values("guide_id")
     new = Q(first_published_at__gte=since) & ~Q(pk__in=seen)
@@ -77,7 +82,7 @@ def report(guide):
     users = [a.user_id for a in accounts]
     seen = dict(Seen.objects.filter(guide=guide, user_id__in=users).values_list("user_id", "at"))
     managers = [a.user_id for a in accounts if a.role == MANAGER]
-    acked = dict(Ack.objects.filter(guide=guide, user_id__in=managers).values_list("user_id", "at"))
+    acked = dict(Ack.objects.filter(COUNTS, guide=guide, user_id__in=managers).values_list("user_id", "at"))
     return [(a, seen.get(a.user_id), acked.get(a.user_id)) for a in accounts]
 
 
@@ -102,7 +107,7 @@ def ack_progress(guide):
 
     expected = set(accounts_for(guide).exclude(venue__is_training=True).filter(role=MANAGER).values_list("venue_id", flat=True))
     confirmed = set(
-        Ack.objects.filter(guide=guide, user__venue_account__role=MANAGER, user__venue_account__venue__in=expected)
+        Ack.objects.filter(COUNTS, guide=guide, user__venue_account__role=MANAGER, user__venue_account__venue__in=expected)
         .values_list("user__venue_account__venue_id", flat=True)
     )
     return len(confirmed), len(expected)

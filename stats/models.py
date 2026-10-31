@@ -62,11 +62,14 @@ class Seen(models.Model):
 
 
 class Ack(models.Model):
-    """„Прочетох“ of a venue account on a post that asks for it (GuidePage.needs_ack)."""
+    """A venue manager's confirmation of a post that asks for it (GuidePage.needs_ack)."""
 
     guide = models.ForeignKey("guides.GuidePage", on_delete=models.CASCADE, related_name="+")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
     at = models.DateTimeField(auto_now_add=True)
+    # Given as „Прочетох и запознах екипа“ (True) or, on a managers-only post, just „Прочетох“ (False).
+    # A plain „Прочетох“ doesn't count once the post is widened to the staff (stats.reading.COUNTS).
+    team = models.BooleanField(default=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["guide", "user"], name="unique_ack_guide_user")]

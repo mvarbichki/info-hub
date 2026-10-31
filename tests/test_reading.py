@@ -330,6 +330,33 @@ class AcknowledgeTests(InfoHubTestCase):
         self.assertIn("✓ Потвърдено", self.html(client.get(everyone.url)))
         self.assertContains(self.editor.get(f"/manage/{everyone.pk}/reads/"), "<b>0 / 2</b> обекта")
 
+    def test_widened_to_the_staff_a_plain_read_no_longer_counts(self):
+        """„Прочетох“ on a managers-only post doesn't promise a briefing: once the post reaches the
+        staff, the manager is asked again; the other way round a confirmation keeps counting."""
+        _, post = self.save_post(self.editor, title="Промяна", all_venues=None, manager_venues=[self.pernik.pk], needs_ack="on")
+        self.manager.post(f"/read/{post.pk}/")
+        self.assertFalse(Ack.objects.get(guide=post).team)
+        self.assertContains(self.editor.get(f"/manage/{post.pk}/reads/"), "<b>1 / 1</b> обекта")
+        self.save_post(self.editor, url=f"/manage/{post.pk}/", title="Промяна", all_venues=None,
+                       staff_venues=[self.pernik.pk], needs_ack="on")
+        page = self.html(self.manager.get(post.url))
+        self.assertIn(">Прочетох и запознах екипа</button>", page)
+        self.assertNotIn("✓ Потвърдено", page)
+        self.assertIn("Промяна", section(self.html(self.manager.get("/")), "Нови за вас"))
+        reads = self.html(self.editor.get(f"/manage/{post.pk}/reads/"))
+        self.assertIn("<b>0 / 1</b> обекта", reads)
+        self.assertIn("Още не са потвърдили: Перник", reads)
+        self.assertIn("Потвърдили: 0 / 1", self.html(self.editor.get("/manage/")))
+        self.manager.post(f"/read/{post.pk}/")
+        self.assertTrue(Ack.objects.get(guide=post).team)
+        self.assertIn("✓ Потвърдено „Прочетох и запознах екипа“", self.html(self.manager.get(post.url)))
+        self.assertContains(self.editor.get(f"/manage/{post.pk}/reads/"), "<b>1 / 1</b> обекта")
+        # narrowed back to managers only: the briefing promise still covers „Прочетох“
+        self.save_post(self.editor, url=f"/manage/{post.pk}/", title="Промяна", all_venues=None,
+                       manager_venues=[self.pernik.pk], needs_ack="on")
+        self.assertIn("✓ Потвърдено „Прочетох“", self.html(self.manager.get(post.url)))
+        self.assertContains(self.editor.get(f"/manage/{post.pk}/reads/"), "<b>1 / 1</b> обекта")
+
     def test_switching_the_request_off(self):
         self.save_post(self.editor, url=f"/manage/{self.rules.pk}/", title="Нови правила", all_venues=None,
                        staff_venues=[self.pernik.pk])

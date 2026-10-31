@@ -46,7 +46,7 @@ def feedback(request, pk):
 
 @require_POST
 def acknowledge(request, pk):
-    """„Прочетох и запознах екипа“ under a post that asks for it: a venue manager confirms for the venue."""
+    """The confirm button under a post that asks for it: a venue manager confirms for the venue."""
     guide = get_object_or_404(visible_guides(request.user), pk=pk, needs_ack=True)
     if confirms(request.user):  # staff (the shared account) and editors have no button: ignored
         confirm(guide, request.user)
