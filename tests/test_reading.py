@@ -148,7 +148,7 @@ class AcknowledgeTests(InfoHubTestCase):
         unread = section(self.html(self.manager.get("/")), "Нови за вас")
         self.assertIn("Нови правила", unread)
         self.assertIn("badge--ack", unread)
-        self.assertIn("когато натиснете „Прочетох и запознах екипа“", unread)
+        self.assertIn("когато потвърдите с бутона най-долу", unread)
         page = self.html(self.manager.get(self.rules.url))
         self.assertIn("Прочетете публикацията, запознайте екипа и потвърдете", page)
         self.assertIn(f'action="/read/{self.rules.pk}/"', page)
@@ -163,6 +163,18 @@ class AcknowledgeTests(InfoHubTestCase):
         self.assertNotIn("Нови правила", section(self.html(self.manager.get("/")), "Нови за вас"))
         self.manager.post(f"/read/{self.rules.pk}/")
         self.assertEqual(Ack.objects.filter(guide=self.rules).count(), 1)
+
+    def test_a_managers_only_post_asks_only_for_read(self):
+        """The staff never see it, so the manager isn't asked to brief the team."""
+        _, post = self.save_post(self.editor, title="За управители", all_venues=None, manager_venues=[self.pernik.pk], needs_ack="on")
+        page = self.html(self.manager.get(post.url))
+        self.assertIn("Прочетете публикацията и потвърдете с бутона <b>„Прочетох“</b>", page)
+        self.assertIn(">Прочетох</button>", page)
+        self.assertNotIn("екипа", page)
+        self.manager.post(f"/read/{post.pk}/")
+        self.assertIn("✓ Потвърдено „Прочетох“", self.html(self.manager.get(post.url)))
+        self.assertIn("Потвърдили „Прочетох“: <b>1 / 1</b>", self.html(self.editor.get(f"/manage/{post.pk}/reads/")))
+        self.assertIn("с „Прочетох“.", self.html(self.editor.get(post.url)))
 
     def test_staff_read_it_like_any_other_post(self):
         self.assertNotIn("Нови правила", section(self.html(self.staff.get("/")), "Нови за вас"))  # older than 30 days

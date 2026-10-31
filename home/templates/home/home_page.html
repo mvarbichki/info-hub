@@ -24,7 +24,7 @@
 {% if unread %}
 <section class="section section--unread">
     <h2 class="section__title">Нови за вас ({{ unread_count }})</h2>
-    <p class="muted small">Изчезват оттук, когато ги отворите{% if confirms %} (а тези с „Потвърдете прочитане“ – когато натиснете „Прочетох и запознах екипа“ най-долу в публикацията){% endif %}.</p>
+    <p class="muted small">Изчезват оттук, когато ги отворите{% if confirms %} (а тези с „Потвърдете прочитане“ – когато потвърдите с бутона най-долу в публикацията){% endif %}.</p>
     <div class="card-grid">
         {% for guide in unread %}{% include "includes/guide_card.html" with show_department=True %}{% endfor %}
     </div>

@@ -169,7 +169,7 @@ class GuidePage(Page):
     # managers), or only the chosen venues' managers. Never a mix of the two.
     audience = models.CharField("Кой я вижда", max_length=10, choices=AUDIENCE_CHOICES, default=AUDIENCE_ALL)
     venues = ParentalManyToManyField("venues.Venue", blank=True, related_name="posts", verbose_name="Избрани обекти")
-    # The venues' managers confirm with „Прочетох и запознах екипа“; the editors see who did (stats.Ack).
+    # The venues' managers confirm it (see ack_label); the editors see who did (stats.Ack).
     needs_ack = models.BooleanField("Искай „Прочетох“ от управителите", default=False)
 
     content_panels = Page.content_panels + [
@@ -221,6 +221,17 @@ class GuidePage(Page):
     def is_draft(self):
         """Saved, but never published (an archived post was published before)."""
         return not self.live and self.first_published_at is None
+
+    @property
+    def ack_briefs_team(self):
+        """A post the staff see too asks the manager to brief the team; one only for managers doesn't
+        (its staff mustn't be told)."""
+        return self.audience != AUDIENCE_MANAGERS
+
+    @property
+    def ack_label(self):
+        """The button the venue managers confirm with."""
+        return "Прочетох и запознах екипа" if self.ack_briefs_team else "Прочетох"
 
     @property
     def is_new(self):

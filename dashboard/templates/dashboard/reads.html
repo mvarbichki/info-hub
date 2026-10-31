@@ -18,7 +18,7 @@
     <p>Вижда се от: <b>{{ audience }}</b>{% if not guide.live %} <span class="status status--hidden">Архивирана: сега не се вижда</span>{% endif %}</p>
     <p class="reads-totals">
         Отворили: <b>{{ opened }} / {{ rows|length }}</b> потребителя
-        {% if guide.needs_ack %} · Потвърдили „Прочетох и запознах екипа“: <b>{{ confirmed }} / {{ expected }}</b> обекта{% endif %}
+        {% if guide.needs_ack %} · Потвърдили „{{ guide.ack_label }}“: <b>{{ confirmed }} / {{ expected }}</b> обекта{% endif %}
     </p>
     {% if guide.needs_ack %}
     {% if missing %}<p class="flash flash--warning">Още не са потвърдили: {{ missing|join:", " }}.</p>
