@@ -205,3 +205,43 @@ class MoveSiteTests(TransactionTestCase):
         staff = Client()
         staff.post("/login/", {"username": "pernik_staff", "password": "Kasa-Tsvete-2026"})
         self.assertEqual(staff.get(post.url).status_code, 200)
+
+
+class DownPageTests(SimpleTestCase):
+    """nginx's page while the app restarts or is down (deploy/maintenance, nginx.conf, docker-compose.yml)."""
+
+    ROOT = Path(__file__).resolve().parent.parent
+
+    def test_nginx_shows_them(self):
+        conf = (self.ROOT / "deploy" / "nginx.conf").read_text(encoding="utf-8")
+        self.assertIn("error_page 502 503 504 $down_page;", conf)
+        self.assertRegex(conf, r"POST\s+/maintenance-form\.html;")
+        self.assertRegex(conf, r"default\s+/maintenance\.html;")
+        self.assertIn("root /usr/share/nginx/infohub;", conf)
+        self.assertIn("internal;", conf.split("location ~ ^/maintenance")[1].split("}")[0])
+        compose = (self.ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        self.assertIn("./deploy/maintenance:/usr/share/nginx/infohub:ro", compose)
+
+    def test_the_pages(self):
+        folder = self.ROOT / "deploy" / "maintenance"
+        page = (folder / "maintenance.html").read_text(encoding="utf-8")
+        form = (folder / "maintenance-form.html").read_text(encoding="utf-8")
+        for html in (page, form):
+            self.assertIn('<html lang="bg">', html)
+            self.assertIn('<meta charset="utf-8">', html)
+            self.assertNotRegex(html, r'(src|href)="(https?:)?//')  # nothing from elsewhere: the app may be down
+            self.assertNotRegex(html, r"\{[{%]")  # plain files, not templates
+        self.assertIn('http-equiv="refresh" content="15"', page)
+        self.assertNotIn("refresh", form)  # a reload would lose what was typed
+        self.assertIn("Назад", form)
+
+
+class LoginPageHelpersTests(InfoHubTestCase):
+    def test_show_password_and_caps_lock(self):
+        html = Client().get("/login/").content.decode()
+        self.assertIn('id="id_password"', html)
+        self.assertIn('<label for="id_password">Парола</label>', html)
+        self.assertRegex(html, r"data-password-toggle[^>]*hidden>Покажи</button>")  # shown by the script
+        self.assertRegex(html, r"data-caps-warning[^>]*hidden>Caps Lock е включен")
+        self.assertEqual(Client().post("/login/", {"username": "pernik_staff", "password": "Kasa-Tsvete-2026"}).status_code, 302)
+

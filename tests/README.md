@@ -23,7 +23,7 @@ names what broke. One part only: `manage.py test tests.test_audience` (file) or
 | `test_settings.py` | Error log, 500 page, MariaDB check, setup commands |
 | `test_previews.py` | Files inside a step, PDF copies of Word/Excel/PowerPoint/TXT/CSV (encoding incl. UTF-16, CSV separator, empty files, very long sheets on A4 pages, the shared time limit, made, shown, protected, deleted, `make_previews`, a sheet on one page); a real LibreOffice run where it is installed (also a wide table, TXT and CSV, a 20 000-row CSV) |
 | `test_check_site.py` | `manage.py check_site`: OK on a healthy site, changes nothing, finds missing files, wrong rights, inconsistent audience, stale search text |
-| `test_js.py` + `js/` | The site's JavaScript (editor, „Кой да я вижда“, „Нов потребител“, PDF inside a post) in jsdom on freshly rendered pages |
+| `test_js.py` + `js/` | The site's JavaScript (editor, „Кой да я вижда“, „Нов потребител“, PDF inside a post, sending a form once, the login page) in jsdom on freshly rendered pages |
 
 The JavaScript tests need [Node.js](https://nodejs.org/) and, once: `cd tests\js` → `npm install`.
 Without them those two tests are skipped (the rest still run).

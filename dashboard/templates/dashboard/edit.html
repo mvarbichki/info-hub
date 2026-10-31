@@ -11,6 +11,7 @@
 
 <form method="post" class="post-form">
     {% csrf_token %}
+    <input type="hidden" name="base_revision" value="{{ base_revision|default_if_none:'' }}">
     <section class="panel">
         <div class="panel__head">
             <h1 class="panel__title">{% if guide %}Редакция{% else %}Нова публикация{% endif %}</h1>
@@ -23,6 +24,7 @@
             </span>
         </div>
         {% if restoring %}<div class="flash flash--warning" role="status">Заредена е по-старата версия от <b>{{ restoring.created_at|date:"j.m.Y H:i" }}</b>{% if restoring.user %} ({{ restoring.user.username }}){% endif %}. Нищо не е променено, докато не натиснете „{% if guide.live %}Публикувай промените{% elif guide.is_draft %}Публикувай{% else %}Запази{% endif %}“{% if guide.live or guide.is_draft %} или „Запази като чернова“{% endif %}. <a href="{% url 'dashboard:update' guide.pk %}">Откажи</a>{% if missing_media %}<br>{{ missing_media }} снимки или файла от тази версия вече ги няма – те липсват и тук.{% endif %}</div>{% endif %}
+        {% if conflict %}<div class="flash flash--error" role="alert" data-conflict>{{ conflict }}</div>{% endif %}
         {% if form.errors %}<div class="flash flash--error" role="alert">Публикацията <b>не е запазена</b>. Поправете отбелязаното в червено по-долу и натиснете бутона отново.{% if form.non_field_errors %} {{ form.non_field_errors|join:" " }}{% endif %}</div>{% endif %}
 
         <div class="field">

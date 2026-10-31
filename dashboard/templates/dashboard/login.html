@@ -25,7 +25,14 @@
     <form method="post" action="{% url 'login' %}" class="login-form">
         {% csrf_token %}
         <label>Потребител<input type="text" name="username" value="{{ form.username.value|default:'' }}" autofocus autocomplete="username" autocapitalize="none" required></label>
-        <label>Парола<input type="password" name="password" autocomplete="current-password" required></label>
+        <div class="login-form__password">
+            <label for="id_password">Парола</label>
+            <div class="password-field">
+                <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+                <button type="button" class="password-field__toggle" data-password-toggle aria-controls="id_password" aria-pressed="false" hidden>Покажи</button>
+            </div>
+            <p class="caps-warning" data-caps-warning role="status" hidden>Caps Lock е включен: паролата различава малки и главни букви.</p>
+        </div>
         <input type="hidden" name="next" value="{{ next }}">
         <button type="submit" class="button-primary">Вход</button>
     </form>

@@ -10,6 +10,7 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 from django.views.decorators.http import require_POST
 from wagtail.documents.models import Document
@@ -99,6 +100,24 @@ def _missing_media(revision):
             + len(documents) - Document.objects.filter(pk__in=documents).count())
 
 
+def _changed_meanwhile(request, page):
+    """When somebody (or the same user in another tab) saved the post after this editor was opened:
+    a message for the editor, else "". The form carries the version it started from (base_revision)."""
+    if page is None or page.latest_revision_id is None:
+        return ""
+    base = request.POST.get("base_revision", "")
+    if not base.isdigit() or int(base) == page.latest_revision_id:
+        return ""  # an old form without the field is let through
+    newer = page.latest_revision
+    who = "вас (в друг таб)" if newer.user_id == request.user.pk else (newer.user.username if newer.user else "друг потребител")
+    return format_html(
+        "Докато редактирахте, публикацията е променена от <b>{}</b> ({}). <b>Нищо не е запазено.</b> "
+        "Вашият текст е по-долу. Вижте промяната в <a href=\"{}\" target=\"_blank\">История ↗</a> и я пренесете тук, "
+        "ако трябва. Натиснете бутона отново, за да запазите вашата версия вместо тяхната.",
+        who, timezone.localtime(newer.created_at).strftime("%d.%m.%Y %H:%M"), reverse("dashboard:history", args=[page.pk]),
+    )
+
+
 @editor_required
 def edit(request, pk=None):
     """The post editor: a new post (no pk) or an existing one; ?revision=<id> fills it with an older
@@ -107,10 +126,15 @@ def edit(request, pk=None):
     latest = page.get_latest_revision_as_object() if page else None
     revision = _revision(request, page)
     first_publish = page is None or page.is_draft  # „Публикувано“, not „Запазено“
+    conflict = ""
+    base_revision = page.latest_revision_id if page else ""
     if request.method == "POST":
         form = GuideForm(request.POST, user=request.user)
         blocks = _posted_blocks(request.POST.get("body"))
-        if form.is_valid():
+        conflict = _changed_meanwhile(request, page)
+        if not conflict and page is not None:
+            base_revision = request.POST.get("base_revision", "")  # a form error: still the version it began with
+        if form.is_valid() and not conflict:
             data = form.cleaned_data
             if "is_pinned" in data:
                 is_pinned, pinned_until = data["is_pinned"], data["pinned_until"]
@@ -169,6 +193,8 @@ def edit(request, pk=None):
 
     return TemplateResponse(request, "dashboard/edit.html", {
         "form": form,
+        "conflict": conflict,
+        "base_revision": base_revision,  # after a conflict: the newer version, so saving again replaces it
         "guide": latest,
         "has_draft": page is not None and (page.is_draft or page.live and page.has_unpublished_changes),
         "restoring": revision,

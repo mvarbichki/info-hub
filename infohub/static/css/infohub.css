@@ -532,3 +532,11 @@ a.button-primary { display: inline-block; text-decoration: none; padding: 10px 2
 
 /* A form on its way (infohub.js): its buttons show it can't be sent twice. */
 form[data-sending] button { cursor: progress; opacity: .7; }
+
+/* Login: the password with „Покажи“ (infohub.js) and the Caps Lock warning. */
+.login-form__password { display: grid; gap: 6px; }
+.login-form__password > label { font-weight: 600; }
+.password-field { display: flex; gap: 8px; }
+.password-field input { flex: 1; }
+.password-field__toggle { padding: 0 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--primary); cursor: pointer; font: inherit; }
+.caps-warning { margin: 0; color: #b42a2a; font-size: 14px; font-weight: 600; }

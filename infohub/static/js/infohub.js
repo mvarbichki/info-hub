@@ -127,3 +127,30 @@ document.addEventListener("submit", function (event) {
 window.addEventListener("pageshow", function () {
     document.querySelectorAll("form[data-sending]").forEach(function (form) { form.removeAttribute("data-sending"); });
 });
+
+// Login page: „Покажи“ shows the typed password (the printed passwords are easy to mistype) and a
+// warning appears while Caps Lock is on. On sending, the field is a password field again, so the
+// browser's password manager treats it as one.
+(function () {
+    var toggle = document.querySelector("[data-password-toggle]");
+    if (!toggle) return;
+    var field = document.getElementById(toggle.getAttribute("aria-controls"));
+    var caps = document.querySelector("[data-caps-warning]");
+    function show(visible) {
+        field.type = visible ? "text" : "password";
+        toggle.textContent = visible ? "Скрий" : "Покажи";
+        toggle.setAttribute("aria-pressed", visible ? "true" : "false");
+    }
+    toggle.hidden = false;  // without JavaScript the button would do nothing
+    toggle.addEventListener("click", function () {
+        show(field.type === "password");
+        field.focus();
+    });
+    function capsLock(event) {
+        if (event.getModifierState) caps.hidden = !event.getModifierState("CapsLock");
+    }
+    field.addEventListener("keydown", capsLock);
+    field.addEventListener("keyup", capsLock);
+    field.addEventListener("blur", function () { caps.hidden = true; });
+    field.form.addEventListener("submit", function () { show(false); });
+})();

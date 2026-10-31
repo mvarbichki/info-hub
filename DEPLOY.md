@@ -270,6 +270,10 @@ docker compose up -d --build
 docker image prune -f    # remove the old image versions (each one is several hundred MB)
 ```
 
+While the app restarts (10–20 s) nginx shows a Bulgarian page „Сайтът се обновява…“ that retries by
+itself every 15 s (`deploy/maintenance/`); a form sent in that moment gets one that says to press Back
+(nothing is lost). To see it: `docker compose stop web`, open the site, `docker compose start web`.
+
 Note: `deploy/nginx.conf` allows uploads up to 320 MB. If you raise `INFOHUB_LIMITS_MB` in
 `infohub/settings/base.py`, raise `client_max_body_size` there too.
 

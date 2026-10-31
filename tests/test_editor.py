@@ -603,3 +603,72 @@ class NotHelpfulTests(InfoHubTestCase):
         self.assertIn("Няма &lt;b&gt;снимка", self.html(self.editor.get(f"/manage/stats/?venue={self.pernik.pk}")))
         self.assertNotIn("Няма &lt;b&gt;снимка", self.html(self.editor.get(f"/manage/stats/?venue={self.sah.pk}")))
         self.assertNotIn("Няма &lt;b&gt;снимка", self.html(self.client_for(self.cms_editor).get("/manage/stats/")))
+
+
+class ConflictTests(InfoHubTestCase):
+    """Two people (or two tabs) on the same post: the later save doesn't silently replace the other."""
+
+    def setUp(self):
+        super().setUp()
+        self.mk = self.client_for(self.marketing_editor)
+        self.boss = self.client_for(self.admin)
+        _, self.post = self.save_post(self.mk, title="Оригинал")
+        self.url = f"/manage/{self.post.pk}/"
+
+    def base_of(self, response):
+        return self.html(response).split('name="base_revision" value="')[1].split('"')[0]
+
+    def test_the_second_save_is_stopped_then_allowed(self):
+        mine = self.base_of(self.mk.get(self.url))
+        self.assertEqual(mine, str(self.post.latest_revision_id))
+        self.save_post(self.boss, url=self.url, title="Промяна на админа", base_revision=self.base_of(self.boss.get(self.url)))
+        response, _ = self.save_post(self.mk, url=self.url, title="Моята промяна", base_revision=mine)
+        html = self.html(response)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("data-conflict", html)
+        self.assertIn("променена от <b>admin</b>", html)
+        self.assertIn("Нищо не е запазено", html)
+        self.assertIn(f"/manage/{self.post.pk}/history/", html)
+        self.assertIn('value="Моята промяна"', html)  # what was typed stays
+        self.assertEqual(GuidePage.objects.get(pk=self.post.pk).title, "Промяна на админа")
+        newer = self.base_of(response)
+        self.assertEqual(newer, str(GuidePage.objects.get(pk=self.post.pk).latest_revision_id))
+        response, _ = self.save_post(self.mk, url=self.url, title="Моята промяна", base_revision=newer)
+        self.assertEqual(response.status_code, 302)  # on purpose this time
+        self.assertEqual(GuidePage.objects.get(pk=self.post.pk).title, "Моята промяна")
+
+    def test_the_same_user_in_another_tab(self):
+        old = self.base_of(self.mk.get(self.url))
+        self.save_post(self.mk, url=self.url, title="Таб 1", base_revision=old)
+        response, _ = self.save_post(self.mk, url=self.url, title="Таб 2", base_revision=old)
+        self.assertIn("променена от <b>вас (в друг таб)</b>", self.html(response))
+
+    def test_a_draft_saved_meanwhile_counts_too(self):
+        old = self.base_of(self.mk.get(self.url))
+        self.save_post(self.boss, url=self.url, title="Чернова", action="draft", base_revision=self.base_of(self.boss.get(self.url)))
+        response, _ = self.save_post(self.mk, url=self.url, title="Моята", base_revision=old)
+        self.assertIn("data-conflict", self.html(response))
+
+    def test_a_form_error_keeps_the_version_it_began_with(self):
+        old = self.base_of(self.mk.get(self.url))
+        response, _ = self.save_post(self.mk, url=self.url, title="   ", base_revision=old)
+        self.assertNotIn("data-conflict", self.html(response))
+        self.assertEqual(self.base_of(response), old)
+        self.save_post(self.boss, url=self.url, title="Междувременно", base_revision=self.base_of(self.boss.get(self.url)))
+        response, _ = self.save_post(self.mk, url=self.url, title="Поправено", base_revision=old)
+        self.assertIn("data-conflict", self.html(response))
+
+    def test_no_conflict_cases(self):
+        response, _ = self.save_post(self.mk, url=self.url, title="Без поле")  # an old open form without the field
+        self.assertEqual(response.status_code, 302)
+        response, post = self.save_post(self.mk, title="Нова", base_revision="")
+        self.assertEqual(response.status_code, 302)
+        self.assertIsNotNone(post)
+        self.assertIn('name="base_revision" value=""', self.html(self.mk.get("/manage/new/")))
+        # archiving and back don't make a new version
+        old = self.base_of(self.mk.get(self.url))
+        self.mk.post(f"/manage/{self.post.pk}/toggle/")
+        self.mk.post(f"/manage/{self.post.pk}/toggle/")
+        response, _ = self.save_post(self.mk, url=self.url, title="След архив", base_revision=old)
+        self.assertEqual(response.status_code, 302)
+

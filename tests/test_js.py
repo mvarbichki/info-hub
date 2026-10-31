@@ -1,5 +1,5 @@
 """The site's JavaScript in jsdom: the post editor, the „Кой да я вижда“ picker, the „Нов потребител“
-form and a PDF shown inside a post. The pages are rendered here from the test database, then tests/js/*.test.js runs on them.
+form, a PDF shown inside a post and the login page. The pages are rendered here from the test database, then tests/js/*.test.js runs on them.
 
 Needs Node.js and, once, `npm install` in tests/js (skipped otherwise)."""
 
@@ -85,3 +85,10 @@ class BrowserScriptTests(InfoHubTestCase):
         self.save("users_new.html", client.get(f"/manage/users/?new_role=staff&new_venue={self.pernik.pk}"))
         self.save("users_error.html", client.post("/manage/users/", {"role": "editor", "username": "", "department": "", "password": "", "venue": ""}))
         print("\n  users.test.js:", self.run_node("users.test.js"))
+
+    def test_login_page(self):
+        from django.test import Client
+
+        self.save("login.html", Client().get("/login/"))
+        print("\n  login.test.js:", self.run_node("login.test.js"))
+
