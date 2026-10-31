@@ -16,15 +16,15 @@ from wagtail.documents.models import Document
 from wagtail.images.models import Image
 from wagtail.models import Page
 
-from guides.audience import accounts_for, summary
+from guides.audience import summary
 from guides.cleanup import storage_report
 from guides.departments import department_collection
 from guides.editor import EditorError, parse, to_editor
 from guides.media import UploadRefused, describe, file_extensions, save_upload
 from guides.models import AUDIENCE_ALL, AUDIENCE_MANAGERS, AUDIENCE_STAFF, DepartmentPage, GuidePage
 from guides.publishing import InactiveLimitReached, delete_guide, inactive_count, save_guide, set_visible
-from stats.reading import ack_counts, report
-from venues.models import MANAGER, Venue
+from stats.reading import ack_progress, report, venue_progress
+from venues.models import Venue
 
 from ..access import can_manage, departments_for
 from ..forms import GuideForm
@@ -57,12 +57,10 @@ def index(request):
     inactive = [(d, inactive_count(d)) for d in departments]
 
     shown = Paginator(guides, 30).get_page(request.GET.get("page"))
-    # „Прочетох: 12 / 46“ for the posts that ask for it (the training venue doesn't count).
-    acks = ack_counts([g for g in shown if g.needs_ack])
+    # „Прочетох: 12 / 23“ (venues whose manager confirmed) for the posts that ask for it.
     for guide in shown:
         if guide.needs_ack:
-            guide.acks = acks.get(guide.pk, 0)
-            guide.ack_total = accounts_for(guide).exclude(venue__is_training=True).count()
+            guide.acks, guide.ack_total = ack_progress(guide)
     context.update({
         "guides": shown,
         "query": query,
@@ -226,29 +224,22 @@ def preview(request, pk):
 
 @editor_required
 def reads(request, pk):
-    """Which venue accounts opened the post and, if it asks for it, confirmed „Прочетох“."""
+    """Which venue accounts opened the post and, if it asks for it, which venues' managers confirmed it."""
     page = managed_page(request, GuidePage, pk)
     rows = report(page)
+    confirmed, missing, no_manager = venue_progress(rows)
     context = head_context(request)
     context.update({
         "guide": page,
         "audience": summary(page),
         "rows": rows,
         "opened": sum(1 for _, seen, _ in rows if seen),
-        "acked": sum(1 for _, _, acked in rows if acked),
-        "missing": _not_confirmed(rows) if page.needs_ack else [],
+        "confirmed": len(confirmed),
+        "expected": len(confirmed) + len(missing),
+        "missing": missing,
+        "no_manager": no_manager,
     })
     return TemplateResponse(request, "dashboard/reads.html", context)
-
-
-def _not_confirmed(rows):
-    """„Перник (управител)“, „Варна (служители, управител)“ … for the accounts without „Прочетох“."""
-    missing = {}
-    for account, _, acked in rows:
-        if not acked:
-            label = "управител" if account.role == MANAGER else "служители"
-            missing.setdefault(account.venue.name, []).append(label)
-    return [f"{name} ({', '.join(dict.fromkeys(roles))})" for name, roles in missing.items()]
 
 
 @editor_required

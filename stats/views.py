@@ -8,7 +8,7 @@ from guides.audience import visible_guides
 from venues.access import is_reader
 
 from .models import Vote
-from .reading import confirm
+from .reading import confirm, confirms
 from .tracking import count_vote, counted_reader
 
 # „Не“ is only taken with a few words on what was missing (also checked in infohub.js).
@@ -46,8 +46,8 @@ def feedback(request, pk):
 
 @require_POST
 def acknowledge(request, pk):
-    """„Прочетох“ under a post that asks for it: remembered per venue account."""
+    """„Прочетох и запознах екипа“ under a post that asks for it: a venue manager confirms for the venue."""
     guide = get_object_or_404(visible_guides(request.user), pk=pk, needs_ack=True)
-    if is_reader(request.user):
+    if confirms(request.user):  # staff (the shared account) and editors have no button: ignored
         confirm(guide, request.user)
     return redirect(f"{guide.url}#ack")

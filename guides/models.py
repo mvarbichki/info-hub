@@ -169,8 +169,8 @@ class GuidePage(Page):
     # managers), or only the chosen venues' managers. Never a mix of the two.
     audience = models.CharField("Кой я вижда", max_length=10, choices=AUDIENCE_CHOICES, default=AUDIENCE_ALL)
     venues = ParentalManyToManyField("venues.Venue", blank=True, related_name="posts", verbose_name="Избрани обекти")
-    # The venue accounts confirm with „Прочетох“; the editors see who did (stats.Ack).
-    needs_ack = models.BooleanField("Искай „Прочетох“", default=False)
+    # The venues' managers confirm with „Прочетох и запознах екипа“; the editors see who did (stats.Ack).
+    needs_ack = models.BooleanField("Искай „Прочетох“ от управителите", default=False)
 
     content_panels = Page.content_panels + [
         FieldPanel("kind"),
@@ -262,9 +262,11 @@ class GuidePage(Page):
             (block.id, block.value) for block in self.body if block.block_type == "heading"
         ]
         context["my_vote"] = context["my_ack"] = None
+        context["confirms"] = False
         if request.user.is_authenticated:
             from dashboard.access import can_manage, is_editor
-            from stats.models import Ack, Vote
+            from stats.models import Vote
+            from stats.reading import confirms, venue_ack
             from venues.access import is_reader
 
             from .audience import summary
@@ -276,6 +278,7 @@ class GuidePage(Page):
                 context["help_department"] = self.department  # „Не“: who to ask
             if is_reader(request.user):
                 context["my_vote"] = Vote.objects.filter(guide=self, user=request.user).values_list("helpful", flat=True).first()
-                if self.needs_ack:
-                    context["my_ack"] = Ack.objects.filter(guide=self, user=request.user).values_list("at", flat=True).first()
+            if self.needs_ack and confirms(request.user):  # a venue manager: the venue's confirmation
+                context["confirms"] = True
+                context["my_ack"] = venue_ack(self, request.user)
         return context

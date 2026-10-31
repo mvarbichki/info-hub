@@ -15,15 +15,16 @@ def audience_badge(context, guide):
 @register.simple_tag(takes_context=True)
 def fresh_badge(context, guide):
     """(css modifier, text) of the freshness label, or None. A venue account sees „Ново“ until it
-    opens the post and „Потвърдете прочитане“ until it presses „Прочетох“ (stats.reading.unread);
-    editors see „Ново“ for 7 days. „Обновено“ for 7 days after a later change, for everybody."""
-    from stats.reading import unread_ids
+    opens the post; a venue manager sees „Потвърдете прочитане“ until the venue confirms it
+    (stats.reading.unread); editors see „Ново“ for 7 days. „Обновено“ for 7 days after a later
+    change, for everybody."""
+    from stats.reading import confirms, unread_ids
     from venues.access import is_reader
 
     request = context.get("request")
     if request is not None and is_reader(request.user):
         if guide.pk in unread_ids(request):
-            return ("ack", "Потвърдете прочитане") if guide.needs_ack else ("new", "Ново")
+            return ("ack", "Потвърдете прочитане") if guide.needs_ack and confirms(request.user) else ("new", "Ново")
     elif guide.is_new:
         return "new", "Ново"
     return ("updated", "Обновено") if guide.is_updated else None

@@ -57,7 +57,7 @@
                 {% if guide.is_draft %}<span class="status status--pending">Чернова</span>
                 {% elif guide.live %}<span class="status status--live">На сайта</span>{% if guide.has_unpublished_changes %}<br><a href="{% url 'dashboard:preview' guide.pk %}" target="_blank" class="small">има чернова ↗</a>{% endif %}
                 {% else %}<span class="status status--hidden">Архивирана</span>{% endif %}
-                {% if guide.needs_ack and not guide.is_draft %}<br><a href="{% url 'dashboard:reads' guide.pk %}" class="small nowrap">Прочетох: {{ guide.acks }} / {{ guide.ack_total }}</a>{% endif %}
+                {% if guide.needs_ack and not guide.is_draft %}<br><a href="{% url 'dashboard:reads' guide.pk %}" class="small nowrap" title="Обекти, чийто управител потвърди „Прочетох и запознах екипа“">Потвърдили: {{ guide.acks }} / {{ guide.ack_total }}</a>{% endif %}
             </td>
             <td class="actions">
                 <a href="{% url 'dashboard:update' guide.pk %}">Редактирай</a>

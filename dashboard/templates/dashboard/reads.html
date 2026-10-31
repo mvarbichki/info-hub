@@ -18,22 +18,25 @@
     <p>Вижда се от: <b>{{ audience }}</b>{% if not guide.live %} <span class="status status--hidden">Архивирана: сега не се вижда</span>{% endif %}</p>
     <p class="reads-totals">
         Отворили: <b>{{ opened }} / {{ rows|length }}</b> потребителя
-        {% if guide.needs_ack %} · Потвърдили „Прочетох“: <b>{{ acked }} / {{ rows|length }}</b>{% endif %}
+        {% if guide.needs_ack %} · Потвърдили „Прочетох и запознах екипа“: <b>{{ confirmed }} / {{ expected }}</b> обекта{% endif %}
     </p>
+    {% if guide.needs_ack %}
     {% if missing %}<p class="flash flash--warning">Още не са потвърдили: {{ missing|join:", " }}.</p>
-    {% elif guide.needs_ack and rows %}<p class="flash flash--success">Всички обекти потвърдиха „Прочетох“.</p>{% endif %}
+    {% elif expected %}<p class="flash flash--success">Всички обекти потвърдиха.</p>{% endif %}
+    {% if no_manager %}<p class="flash flash--warning">Без акаунт на управител (не могат да потвърдят): {{ no_manager|join:", " }}. Добавете им управител в „Потребители“.</p>{% endif %}
+    {% endif %}
 
     {% if rows %}
     <div class="table-wrap">
     <table class="guide-table">
-        <thead><tr><th>Обект</th><th>Потребител</th><th>Отворена</th>{% if guide.needs_ack %}<th>„Прочетох“</th>{% endif %}</tr></thead>
+        <thead><tr><th>Обект</th><th>Потребител</th><th>Отворена</th>{% if guide.needs_ack %}<th>Потвърдена</th>{% endif %}</tr></thead>
         <tbody>
         {% for account, seen, acked in rows %}
         <tr>
             <td>{{ account.venue.name }}</td>
             <td>{{ account.user.username }} <span class="muted small">({% if account.role == "manager" %}управител{% else %}служители{% endif %})</span></td>
             <td class="nowrap">{% if seen %}{{ seen|date:"j.m.Y H:i" }}{% else %}<span class="muted">не</span>{% endif %}</td>
-            {% if guide.needs_ack %}<td class="nowrap">{% if acked %}<span class="status status--live">✓ {{ acked|date:"j.m.Y H:i" }}</span>{% else %}<span class="status status--pending">не е потвърдено</span>{% endif %}</td>{% endif %}
+            {% if guide.needs_ack %}<td class="nowrap">{% if account.role != "manager" %}<span class="muted">потвърждава управителят</span>{% elif acked %}<span class="status status--live">✓ {{ acked|date:"j.m.Y H:i" }}</span>{% else %}<span class="status status--pending">не е потвърдено</span>{% endif %}</td>{% endif %}
         </tr>
         {% endfor %}
         </tbody>
@@ -42,6 +45,6 @@
     {% else %}
     <p class="muted">Нито един работещ обект не вижда тази публикация.</p>
     {% endif %}
-    <p class="muted small">Броят се потребителите на работещите обекти, които виждат публикацията (без „Обучение“). Публикацията изчезва от „Нови за вас“ на обекта, когато я отвори.</p>
+    <p class="muted small">Броят се потребителите на работещите обекти, които виждат публикацията (без „Обучение“). Публикацията изчезва от „Нови за вас“ на обекта, когато я отвори{% if guide.needs_ack %}, а при управителя – когато потвърди. Потвърждава управителят: акаунтът на служителите е общ за обекта. Ако обектът има няколко управители, стига един{% endif %}.</p>
 </section>
 {% endblock %}

@@ -69,7 +69,7 @@ class GuideForm(forms.Form):
     all_venues = forms.BooleanField(label="Всички обекти", required=False, initial=True)
     staff_venues = forms.ModelMultipleChoiceField(queryset=Venue.objects.all(), required=False, error_messages=GONE_VENUE)
     manager_venues = forms.ModelMultipleChoiceField(queryset=Venue.objects.all(), required=False, error_messages=GONE_VENUE)
-    needs_ack = forms.BooleanField(label="Искай „Прочетох“", required=False)
+    needs_ack = forms.BooleanField(label="Искай „Прочетох“ от управителите", required=False)
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)

@@ -32,7 +32,7 @@ class HomePage(Page):
         """Staff-first: what people search for and read most, then a light overview per department."""
         from guides.audience import visible_guides
         from guides.models import DepartmentPage
-        from stats.reading import unread
+        from stats.reading import confirms, unread
         from stats.reports import highlights, popular_for
         from venues.access import is_reader
 
@@ -48,11 +48,13 @@ class HomePage(Page):
 
         context["departments"] = departments
         context["popular_searches"] = popular_for(request.user)
-        # Every post appears once: „Нови за вас“ (venue accounts: not opened yet, or still to
-        # confirm), then „Важно“, then „Последни публикации“.
+        # Every post appears once: „Нови за вас“ (venue accounts: not opened yet or, for a manager,
+        # still to confirm, those first), then „Важно“, then „Последни публикации“.
         shown = []
         if is_reader(request.user):
-            fresh = list(unread(request.user, guides).order_by("-needs_ack", "-last_published_at"))
+            context["confirms"] = confirms(request.user)
+            order = ("-needs_ack", "-last_published_at") if context["confirms"] else ("-last_published_at",)
+            fresh = list(unread(request.user, guides).order_by(*order))
             context["unread"] = fresh[:UNREAD_SHOWN]
             context["unread_count"] = len(fresh)
             context["unread_more"] = len(fresh) - len(context["unread"])

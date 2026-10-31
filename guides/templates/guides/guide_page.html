@@ -17,7 +17,7 @@
         <p class="guide__date">Последна промяна: <time datetime="{{ page.last_published_at|date:'c' }}">{{ page.last_published_at|date:"j E Y, H:i" }}</time></p>
         {% endif %}
         {% if request.is_preview %}<p class="flash flash--warning">Преглед: така ще изглежда публикацията. Обектите още не виждат тези промени.</p>{% endif %}
-        {% if page.needs_ack and not is_editor and not my_ack %}<p class="ack-hint">Прочетете публикацията и потвърдете с бутона <b>„Прочетох“</b> най-долу.</p>{% endif %}
+        {% if confirms and not my_ack %}<p class="ack-hint">Прочетете публикацията, запознайте екипа и потвърдете с бутона <b>„Прочетох и запознах екипа“</b> най-долу.</p>{% endif %}
     </header>
 
     {% if headings|length > 1 %}
@@ -39,17 +39,19 @@
         {% endfor %}
     </div>
 
-    {% if page.needs_ack %}
+    {% if page.needs_ack and is_editor %}
     <section class="ack" id="ack">
-        {% if is_editor %}
-        <p>Обектите потвърждават тази публикация с „Прочетох“.{% if can_edit and not request.is_preview %} <a href="{% url 'dashboard:reads' page.pk %}">Кой е прочел и потвърдил</a>{% endif %}</p>
-        {% elif my_ack %}
-        <p class="ack__done">✓ Потвърдихте, че сте прочели: {{ my_ack|date:"j E Y, H:i" }}</p>
+        <p>Управителите на обектите потвърждават тази публикация с „Прочетох и запознах екипа“.{% if can_edit and not request.is_preview %} <a href="{% url 'dashboard:reads' page.pk %}">Кой е прочел и потвърдил</a>{% endif %}</p>
+    </section>
+    {% elif confirms %}
+    <section class="ack" id="ack">
+        {% if my_ack %}
+        <p class="ack__done">✓ Потвърдено „Прочетох и запознах екипа“: {{ my_ack.at|date:"j E Y, H:i" }}{% if my_ack.user_id != request.user.pk %} ({{ my_ack.user.username }}){% endif %}</p>
         {% else %}
         <form method="post" action="{% url 'guide_ack' page.pk %}" class="ack__form">
             {% csrf_token %}
-            <span>Прочетохте ли публикацията?</span>
-            <button type="submit" class="button-primary">Прочетох</button>
+            <span>Прочетохте ли публикацията и запознахте ли екипа?</span>
+            <button type="submit" class="button-primary">Прочетох и запознах екипа</button>
         </form>
         {% endif %}
     </section>

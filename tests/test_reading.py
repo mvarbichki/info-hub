@@ -1,4 +1,4 @@
-"""Drafts and preview, „Нови за вас“, „Прочетох“ and the „Прочитания“ report."""
+"""Drafts and preview, „Нови за вас“, „Прочетох и запознах екипа“ and the „Прочитания“ report."""
 
 from datetime import timedelta
 
@@ -130,56 +130,113 @@ class UnreadTests(InfoHubTestCase):
 
 
 class AcknowledgeTests(InfoHubTestCase):
+    """„Прочетох и запознах екипа“: only a venue's manager confirms (the staff account is shared by the
+    venue); one manager's confirmation counts for the venue."""
+
     def setUp(self):
         super().setUp()
         self.editor = self.client_for(self.marketing_editor)
         self.staff = self.client_for(self.pernik_staff)
         self.manager = self.client_for(self.pernik_manager)
         _, self.rules = self.save_post(self.editor, title="Нови правила", all_venues=None, staff_venues=[self.pernik.pk], needs_ack="on")
+        # older than the 30 days of „Ново“: only the confirmation keeps it in „Нови за вас“
+        GuidePage.objects.filter(pk=self.rules.pk).update(first_published_at=timezone.now() - timedelta(days=90))
 
-    def test_flow(self):
+    def test_the_manager_confirms(self):
         self.assertTrue(self.rules.needs_ack)
         self.assertIn('name="needs_ack" checked', self.html(self.editor.get(f"/manage/{self.rules.pk}/")))
-        GuidePage.objects.filter(pk=self.rules.pk).update(first_published_at=timezone.now() - timedelta(days=90))
-        unread = section(self.html(self.staff.get("/")), "Нови за вас")
+        unread = section(self.html(self.manager.get("/")), "Нови за вас")
         self.assertIn("Нови правила", unread)
         self.assertIn("badge--ack", unread)
-        page = self.html(self.staff.get(self.rules.url))
-        self.assertIn("Прочетете публикацията и потвърдете", page)
+        self.assertIn("когато натиснете „Прочетох и запознах екипа“", unread)
+        page = self.html(self.manager.get(self.rules.url))
+        self.assertIn("Прочетете публикацията, запознайте екипа и потвърдете", page)
         self.assertIn(f'action="/read/{self.rules.pk}/"', page)
-        self.assertIn("Нови правила", section(self.html(self.staff.get("/")), "Нови за вас"))  # opening isn't enough
-        response = self.staff.post(f"/read/{self.rules.pk}/")
+        self.assertIn(">Прочетох и запознах екипа</button>", page)
+        self.assertIn("Нови правила", section(self.html(self.manager.get("/")), "Нови за вас"))  # opening isn't enough
+        response = self.manager.post(f"/read/{self.rules.pk}/")
         self.assertTrue(response["Location"].endswith("#ack"))
-        page = self.html(self.staff.get(self.rules.url))
-        self.assertIn("Потвърдихте, че сте прочели", page)
+        page = self.html(self.manager.get(self.rules.url))
+        self.assertIn("✓ Потвърдено „Прочетох и запознах екипа“", page)
+        self.assertNotIn("(pernik_manager)", section(page, 'id="ack"', "</section>"))  # it was me
         self.assertNotIn("/read/", page)
-        self.assertNotIn("Нови правила", section(self.html(self.staff.get("/")), "Нови за вас"))
-        self.staff.post(f"/read/{self.rules.pk}/")
+        self.assertNotIn("Нови правила", section(self.html(self.manager.get("/")), "Нови за вас"))
+        self.manager.post(f"/read/{self.rules.pk}/")
         self.assertEqual(Ack.objects.filter(guide=self.rules).count(), 1)
+
+    def test_staff_read_it_like_any_other_post(self):
+        self.assertNotIn("Нови правила", section(self.html(self.staff.get("/")), "Нови за вас"))  # older than 30 days
+        GuidePage.objects.filter(pk=self.rules.pk).update(first_published_at=timezone.now())
+        unread = section(self.html(self.staff.get("/")), "Нови за вас")
+        self.assertIn("Нови правила", unread)
+        self.assertIn('badge--new">Ново<', unread)
+        self.assertNotIn("badge--ack", unread)
+        self.assertNotIn("Прочетох", unread)
+        page = self.html(self.staff.get(self.rules.url))
+        self.assertNotIn("Прочетох", page)
+        self.assertNotIn("/read/", page)
+        self.assertNotIn("Нови правила", section(self.html(self.staff.get("/")), "Нови за вас"))  # opened: gone
+        self.assertIn("Помогна ли ви тази публикация?", page)  # the vote stays for staff
+        self.assertIn("Помогна ли ви тази публикация?", self.html(self.manager.get(self.rules.url)))
+        # a staff click (old page, typed address) changes nothing
+        self.assertTrue(self.staff.post(f"/read/{self.rules.pk}/")["Location"].endswith("#ack"))
+        self.assertFalse(Ack.objects.exists())
+
+    def test_one_manager_confirms_for_the_venue(self):
+        from venues.access import create_account
+        from venues.models import MANAGER
+
+        from .base import PASSWORD
+
+        second = self.client_for(create_account("pernik_manager2", self.pernik, MANAGER, PASSWORD))
+        self.assertIn("badge--ack", section(self.html(second.get("/")), "Нови за вас"))
+        self.manager.post(f"/read/{self.rules.pk}/")
+        self.assertNotIn("Нови правила", section(self.html(second.get("/")), "Нови за вас"))
+        page = self.html(second.get(self.rules.url))
+        self.assertIn("✓ Потвърдено „Прочетох и запознах екипа“", page)
+        self.assertIn("(pernik_manager)", section(page, 'id="ack"', "</section>"))  # who did
+        self.assertNotIn("/read/", page)
+        reads = self.html(self.editor.get(f"/manage/{self.rules.pk}/reads/"))
+        self.assertIn("Потвърдили „Прочетох и запознах екипа“: <b>1 / 1</b> обекта", reads)
+        self.assertContains(self.editor.get("/manage/"), "Потвърдили: 1 / 1")
 
     def test_refused(self):
         _, plain = self.save_post(self.editor, title="Без потвърждение")
-        self.assertEqual(self.client_for(self.mladost_staff).post(f"/read/{self.rules.pk}/").status_code, 404)
-        self.assertEqual(self.staff.post(f"/read/{plain.pk}/").status_code, 404)
-        self.assertEqual(self.staff.get(f"/read/{self.rules.pk}/").status_code, 405)
-        self.assertEqual(self.staff.post("/read/99999/").status_code, 404)
+        self.assertEqual(self.client_for(self.mladost_manager).post(f"/read/{self.rules.pk}/").status_code, 404)
+        self.assertEqual(self.manager.post(f"/read/{plain.pk}/").status_code, 404)
+        self.assertEqual(self.manager.get(f"/read/{self.rules.pk}/").status_code, 405)
+        self.assertEqual(self.manager.post("/read/99999/").status_code, 404)
         self.editor.post(f"/read/{self.rules.pk}/")
         self.assertFalse(Ack.objects.filter(user=self.marketing_editor).exists())
-        self.assertContains(self.editor.get(self.rules.url), f"/manage/{self.rules.pk}/reads/")
+        page = self.html(self.editor.get(self.rules.url))
+        self.assertIn("Управителите на обектите потвърждават", page)
+        self.assertIn(f"/manage/{self.rules.pk}/reads/", page)
+        self.assertNotIn("<button", section(page, 'id="ack"', "</section>"))
 
     def test_report(self):
         self.staff.get(self.rules.url)
-        self.staff.post(f"/read/{self.rules.pk}/")
         page = self.html(self.editor.get(f"/manage/{self.rules.pk}/reads/"))
         self.assertIn("pernik_staff", page)
         self.assertIn("pernik_manager", page)
         self.assertNotIn("mladost_", page)
         self.assertIn("Отворили: <b>1 / 2</b>", page)
-        self.assertIn("„Прочетох“: <b>1 / 2</b>", page)
-        self.assertIn("Още не са потвърдили: Перник (управител).", page)
+        self.assertIn("Потвърдили „Прочетох и запознах екипа“: <b>0 / 1</b> обекта", page)
+        self.assertIn("Още не са потвърдили: Перник.", page)
+        self.assertIn("потвърждава управителят", page)  # the staff row
+        self.assertContains(self.editor.get("/manage/"), "Потвърдили: 0 / 1")
         self.manager.post(f"/read/{self.rules.pk}/")
-        self.assertContains(self.editor.get(f"/manage/{self.rules.pk}/reads/"), "Всички обекти потвърдиха")
-        self.assertContains(self.editor.get("/manage/"), "Прочетох: 2 / 2")
+        page = self.html(self.editor.get(f"/manage/{self.rules.pk}/reads/"))
+        self.assertIn("Всички обекти потвърдиха.", page)
+        self.assertIn("<b>1 / 1</b> обекта", page)
+        self.assertContains(self.editor.get("/manage/"), "Потвърдили: 1 / 1")
+
+    def test_staff_confirmations_from_before_dont_count(self):
+        Ack.objects.create(guide=self.rules, user=self.pernik_staff)  # kept from before the change
+        page = self.html(self.editor.get(f"/manage/{self.rules.pk}/reads/"))
+        self.assertIn("<b>0 / 1</b> обекта", page)
+        self.assertIn("Още не са потвърдили: Перник.", page)
+        self.assertContains(self.editor.get("/manage/"), "Потвърдили: 0 / 1")
+        self.assertIn("badge--ack", section(self.html(self.manager.get("/")), "Нови за вас"))
 
     def test_report_for_all_venues_counts_working_venues_only(self):
         from venues.models import Venue
@@ -187,9 +244,28 @@ class AcknowledgeTests(InfoHubTestCase):
         Venue.objects.filter(pk=self.sah.pk).update(is_active=False)
         _, everyone = self.save_post(self.editor, title="За всички", needs_ack="on")
         page = self.html(self.editor.get(f"/manage/{everyone.pk}/reads/"))
-        self.assertIn("„Прочетох“: <b>0 / 2</b>", page)
+        self.assertIn("<b>0 / 1</b> обекта", page)
         self.assertNotIn("mladost_", page)
         self.assertNotIn(">staff<", page)  # training
+
+    def test_a_venue_without_a_manager_is_named(self):
+        from venues.models import Venue
+
+        Venue.objects.filter(pk=self.sah.pk).update(is_active=True)
+        self.mladost_manager.delete()
+        _, everyone = self.save_post(self.editor, title="За всички", needs_ack="on")
+        page = self.html(self.editor.get(f"/manage/{everyone.pk}/reads/"))
+        self.assertIn("<b>0 / 1</b> обекта", page)  # София – Младост can't confirm: not expected
+        self.assertIn("Без акаунт на управител (не могат да потвърдят): София – Младост.", page)
+        self.assertIn("Още не са потвърдили: Перник.", page)
+
+    def test_only_managers_post(self):
+        _, managers = self.save_post(self.editor, title="За управители", all_venues=None,
+                                     manager_venues=[self.pernik.pk, self.sah.pk], needs_ack="on")
+        page = self.html(self.editor.get(f"/manage/{managers.pk}/reads/"))
+        self.assertIn("Отворили: <b>0 / 2</b>", page)
+        self.assertIn("<b>0 / 2</b> обекта", page)
+        self.assertNotIn("Без акаунт на управител", page)
 
     def test_report_access(self):
         self.assertTrue(self.staff.get(f"/manage/{self.rules.pk}/reads/")["Location"].startswith("/login/"))
@@ -197,4 +273,5 @@ class AcknowledgeTests(InfoHubTestCase):
         _, plain = self.save_post(self.editor, title="Без потвърждение")
         page = self.html(self.editor.get(f"/manage/{plain.pk}/reads/"))
         self.assertIn("Отворили", page)
-        self.assertNotIn("„Прочетох“:", page)
+        self.assertNotIn("Потвърдили", page)
+        self.assertNotIn("Всички обекти потвърдиха", page)

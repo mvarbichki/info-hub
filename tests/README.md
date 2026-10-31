@@ -17,7 +17,7 @@ names what broke. One part only: `manage.py test tests.test_audience` (file) or
 | `test_access.py` | Login for each role, pages behind the login, throttle (also behind the proxy), venue accounts can't change passwords, stopped venues, logout, expired forms |
 | `test_editor.py` | Uploads, saving and cleaning posts, editing, every error message and where it shows, departments, moving, „Важно“, archive, delete, protected files (ranges), cleanup, counting |
 | `test_audience.py` | Who sees which post (all / staff / only managers), labels, lists, search, files, chips, deleting venues, category pages |
-| `test_reading.py` | Drafts and preview, „Нови за вас“, „Прочетох“, „Прочитания“ |
+| `test_reading.py` | Drafts and preview, „Нови за вас“, „Прочетох и запознах екипа“ (managers only, one per venue), „Прочитания“ |
 | `test_panel.py` | Потребители, Обекти, password sheet, Раздели (incl. ↑ ↓ order), Категории, Статистика, login-name suggestions |
 | `test_edges.py` | Edge cases: hostile text in titles/captions/names shown as text everywhere, login `next` to other sites ignored, odd search input, unknown ids, length limits, section order, `/django-admin/` gone |
 | `test_settings.py` | Error log, 500 page, MariaDB check, setup commands |
