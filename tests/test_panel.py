@@ -257,7 +257,7 @@ class PasswordSheetTests(InfoHubTestCase):
     def test_nothing_to_renew(self):
         empty = Venue.objects.create(name="Празен")
         self.assertContains(self.boss.post(f"/manage/venues/{empty.pk}/passwords/", follow=True), "Няма потребители")
-        self.assertEqual(self.boss.get("/manage/venues/passwords/").status_code, 405)
+        self.assertRedirects(self.boss.get("/manage/venues/passwords/"), "/login/", fetch_redirect_response=False)  # button-only: no empty 405
 
 
 class DepartmentsTabTests(InfoHubTestCase):
@@ -321,7 +321,7 @@ class DepartmentsTabTests(InfoHubTestCase):
         move(DepartmentPage.objects.get(slug="hr"), "down")  # already last
         move(self.it, "sideways")
         self.assertEqual(order(), ["marketing", "it", "cms", "hr"])
-        self.assertEqual(self.boss.get(f"/manage/departments/{self.it.pk}/move/").status_code, 405)
+        self.assertRedirects(self.boss.get(f"/manage/departments/{self.it.pk}/move/"), "/login/", fetch_redirect_response=False)  # button-only: no empty 405
         self.assertEqual(self.client_for(self.marketing_editor).post(f"/manage/departments/{self.it.pk}/move/", {"direction": "up"}).status_code, 403)
         # The site menu and the home page follow, the addresses stay.
         home = self.html(self.client_for(self.pernik_staff).get("/"))

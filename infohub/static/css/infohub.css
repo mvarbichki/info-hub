@@ -529,3 +529,6 @@ a.button-primary { display: inline-block; text-decoration: none; padding: 10px 2
 
 /* Обекти: new passwords for every venue */
 .sheet-all { margin-top: 14px; }
+
+/* A form on its way (infohub.js): its buttons show it can't be sent twice. */
+form[data-sending] button { cursor: progress; opacity: .7; }

@@ -1,7 +1,5 @@
 """Login, logout and changing your own password."""
 
-import re
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required, login_required
@@ -12,14 +10,13 @@ from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 
+from infohub.access import EDITOR_PAGE, LOGOUT_PAGE
 from venues.access import is_reader
 
 from ..access import is_editor
 from ..forms import LoginForm
 from ..models import must_change_password, set_must_change_password
 
-EDITOR_PAGE = re.compile(r"^/manage/(new|\d+)/$")
-LOGOUT_PAGE = re.compile(r"^/(manage|admin)/logout/")
 
 
 def client_ip(request):

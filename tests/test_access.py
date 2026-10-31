@@ -6,6 +6,8 @@ from django.test import Client, override_settings
 from dashboard.access import create_editor
 from dashboard.models import must_change_password
 
+from guides.models import GuidePage
+
 from .base import PASSWORD, InfoHubTestCase
 
 
@@ -230,3 +232,105 @@ class ExpiredFormTests(InfoHubTestCase):
         self.assertContains(response, "Назад")
         self.assertContains(anon.get("/login/?next=/manage/12/"), "тя не е запазена")
         self.assertNotContains(anon.get("/login/?next=/manage/stats/"), "тя не е запазена")
+
+
+class BrowserHabitsTests(InfoHubTestCase):
+    """What browsers and people commonly do: a button pressed after the session ended, two tabs,
+    an old page, the Back button after „Изход“."""
+
+    def setUp(self):
+        super().setUp()
+        self.editor = self.client_for(self.marketing_editor)
+        _, self.rules = self.save_post(self.editor, title="Правила", needs_ack="on")
+
+    def logged_out_post(self, url, referer=None):
+        client = Client()
+        extra = {"HTTP_REFERER": referer} if referer else {}
+        return client, client.post(url, **extra)
+
+    def test_a_button_after_the_session_ended_comes_back_to_its_page(self):
+        page = f"http://testserver{self.rules.url}"
+        client, response = self.logged_out_post(f"/read/{self.rules.pk}/", page)
+        self.assertRedirects(response, f"/login/?next={self.rules.url}", fetch_redirect_response=False)
+        response = client.post(response["Location"], {"username": "pernik_manager", "password": PASSWORD}, follow=True)
+        self.assertEqual(response.redirect_chain, [(self.rules.url, 302)])
+        self.assertContains(response, ">Прочетох и запознах екипа</button>")  # pressed again on purpose
+        # a panel button with the list's filter
+        client, response = self.logged_out_post(f"/manage/{self.rules.pk}/toggle/", "http://testserver/manage/?status=live")
+        self.assertRedirects(response, "/login/?next=/manage/%3Fstatus%3Dlive", fetch_redirect_response=False)
+        self.assertTrue(GuidePage.objects.get(pk=self.rules.pk).live)  # nothing happened
+
+    def test_no_or_foreign_referer_falls_back_to_the_start_page(self):
+        for referer in (None, "http://evil.example/x/", "http://testserver/login/"):
+            client, response = self.logged_out_post(f"/read/{self.rules.pk}/", referer)
+            self.assertRedirects(response, f"/login/?next=/read/{self.rules.pk}/", fetch_redirect_response=False)
+            response = client.post(response["Location"], {"username": "pernik_manager", "password": PASSWORD}, follow=True)
+            self.assertEqual(response.redirect_chain[-1], ("/", 302), referer)
+            self.assertEqual(response.status_code, 200)
+
+    def test_saving_the_editor_with_a_place_still_explains(self):
+        client, response = self.logged_out_post(f"/manage/new/?place={self.marketing.pk}", f"http://testserver/manage/new/?place={self.marketing.pk}")
+        self.assertContains(client.get(response["Location"]), "тя не е запазена")
+
+    def test_a_button_address_opened_as_a_page(self):
+        manager = self.client_for(self.pernik_manager)
+        response = manager.get(f"/read/{self.rules.pk}/", follow=True)
+        self.assertEqual(response.redirect_chain, [("/login/", 302), ("/", 302)])
+        response = self.editor.get(f"/manage/{self.rules.pk}/delete/", follow=True)
+        self.assertEqual(response.redirect_chain[-1], ("/manage/", 302))
+        self.assertTrue(GuidePage.objects.filter(pk=self.rules.pk).exists())
+
+    def csrf_client(self):
+        client = Client(enforce_csrf_checks=True)
+        client.get("/login/")
+        return client, client.cookies["csrftoken"].value
+
+    def test_second_login_tab(self):
+        client, token = self.csrf_client()
+        client.post("/login/", {"username": "pernik_staff", "password": PASSWORD, "csrfmiddlewaretoken": token})
+        response = client.post("/login/", {"username": "pernik_staff", "password": PASSWORD, "csrfmiddlewaretoken": token}, follow=True)
+        self.assertEqual(response.redirect_chain, [("/login/", 302), ("/", 302)])
+        self.assertContains(response, "Изход (pernik_staff)")
+
+    def test_old_login_page_while_logged_out(self):
+        client, _ = self.csrf_client()
+        response = client.post("/login/?next=/marketing/", {"username": "pernik_staff", "password": PASSWORD, "csrfmiddlewaretoken": "x" * 64}, follow=True)
+        self.assertEqual(response.redirect_chain, [("/login/?next=/marketing/", 302)])
+        self.assertContains(response, "Страницата за вход беше стара. Влезте отново.")
+        self.assertNotContains(response, "Страницата е изтекла")
+
+    def test_old_logout_button_after_a_login_in_another_tab(self):
+        client, token = self.csrf_client()
+        client.post("/login/", {"username": "pernik_staff", "password": PASSWORD, "csrfmiddlewaretoken": token})
+        response = client.post("/manage/logout/", {"csrfmiddlewaretoken": token})  # the old page's token
+        self.assertContains(response, "Не излязохте", status_code=403)
+        self.assertContains(client.get("/"), "Изход (pernik_staff)")  # still in
+        fresh = response.content.decode().split('name="csrfmiddlewaretoken" value="')[1].split('"')[0]
+        response = client.post("/manage/logout/", {"csrfmiddlewaretoken": fresh})  # the page's own button
+        self.assertRedirects(response, "/login/", fetch_redirect_response=False)
+        self.assertTrue(client.get("/")["Location"].startswith("/login/"))  # out now
+        # already logged out (a second tab): just the login page
+        response = client.post("/manage/logout/", {"csrfmiddlewaretoken": token})
+        self.assertRedirects(response, "/login/", fetch_redirect_response=False)
+
+    def test_other_old_forms_keep_the_explanation(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.pernik_manager)
+        response = client.post(f"/read/{self.rules.pk}/", {"csrfmiddlewaretoken": "x" * 64})
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "Страницата е изтекла", status_code=403)
+
+    def test_pages_are_not_kept_by_the_browser(self):
+        manager = self.client_for(self.pernik_manager)
+        for client, url in ((manager, "/"), (manager, self.rules.url), (manager, "/search/?q=x"),
+                            (self.editor, "/manage/"), (self.editor, f"/manage/{self.rules.pk}/reads/")):
+            cache_control = client.get(url)["Cache-Control"]
+            self.assertIn("no-store", cache_control, url)
+            self.assertIn("private", cache_control, url)
+        for url in ("/manage/new/", f"/manage/new/?place={self.marketing.pk}", f"/manage/{self.rules.pk}/"):
+            cache_control = self.editor.get(url)["Cache-Control"]
+            self.assertIn("no-cache", cache_control, url)  # revalidated, but Back keeps the typed text
+            self.assertIn("private", cache_control, url)
+            self.assertNotIn("no-store", cache_control, url)
+        self.assertNotIn("no-store", manager.get("/robots.txt").get("Cache-Control", ""))  # not a page
+

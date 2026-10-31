@@ -60,8 +60,9 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Nothing on the site is visible without logging in (each venue has its own accounts).
-    "django.contrib.auth.middleware.LoginRequiredMiddleware",
+    "infohub.access.LoginRequired",
     "infohub.access.NoIndexMiddleware",
+    "infohub.access.PageMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "wagtail.contrib.redirects.middleware.RedirectMiddleware",

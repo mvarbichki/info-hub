@@ -216,7 +216,7 @@ class AcknowledgeTests(InfoHubTestCase):
         _, plain = self.save_post(self.editor, title="Без потвърждение")
         self.assertEqual(self.client_for(self.mladost_manager).post(f"/read/{self.rules.pk}/").status_code, 404)
         self.assertEqual(self.manager.post(f"/read/{plain.pk}/").status_code, 404)
-        self.assertEqual(self.manager.get(f"/read/{self.rules.pk}/").status_code, 405)
+        self.assertRedirects(self.manager.get(f"/read/{self.rules.pk}/"), "/login/", fetch_redirect_response=False)  # button-only: no empty 405
         self.assertEqual(self.manager.post("/read/99999/").status_code, 404)
         self.editor.post(f"/read/{self.rules.pk}/")
         self.assertFalse(Ack.objects.filter(user=self.marketing_editor).exists())

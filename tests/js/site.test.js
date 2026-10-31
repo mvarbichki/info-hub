@@ -99,6 +99,23 @@ function press(w, button) {
     check("„Да“: sent at once, without a reason", w.sent.length === 1 && w.sent[0].helpful === "yes" && !("reason" in w.sent[0]), w.sent);
     check("„Да“: thank-you shown", f.querySelector(".feedback__form").hidden && !f.querySelector("[data-feedback-thanks]").hidden);
 
+    // A form is sent once: a second click does nothing (and asks nothing) until the page comes back.
+    d = load(true, 1280);
+    d.body.insertAdjacentHTML("beforeend", '<form method="post" id="once"><button>Изтрий</button></form>'
+        + '<form method="get" id="find"><button>Търси</button></form>'
+        + '<form method="post" id="own"><button>Прати</button></form>');
+    const once = d.getElementById("once"), find = d.getElementById("find"), own = d.getElementById("own");
+    let asked = 0;
+    once.addEventListener("submit", () => { asked++; });  // like dashboard.js's confirm dialog
+    own.addEventListener("submit", (e) => e.preventDefault());  // like „Помогна ли ви?“
+    const submitOnce = (form) => { const e = new d.defaultView.Event("submit", { bubbles: true, cancelable: true }); form.dispatchEvent(e); return e.defaultPrevented; };
+    check("first submit goes through", submitOnce(once) === false && once.hasAttribute("data-sending"));
+    check("second submit is stopped, no second dialog", submitOnce(once) === true && asked === 1, asked);
+    check("a search form (GET) isn't held", submitOnce(find) === false && submitOnce(find) === false && !find.hasAttribute("data-sending"));
+    check("a form its own script sends isn't held", submitOnce(own) === true && !own.hasAttribute("data-sending") && submitOnce(own) === true);
+    d.defaultView.dispatchEvent(new d.defaultView.Event("pageshow"));
+    check("back on the page: the form works again", !once.hasAttribute("data-sending") && submitOnce(once) === false && asked === 2);
+
     console.log(failed.length ? `${failed.length} FAILED of ${passed + failed.length}` : `${passed}/${passed} passed`);
 process.exit(failed.length ? 1 : 0);
 })();

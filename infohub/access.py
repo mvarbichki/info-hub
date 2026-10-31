@@ -9,21 +9,76 @@ posts it may see (guides/audience.py), so a manager-only post's pictures don't r
 import mimetypes
 import os
 import re
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
+from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.contrib.auth.views import redirect_to_login
 from django.http import Http404, HttpResponse, HttpResponseNotModified, StreamingHttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render, resolve_url
+from django.urls import reverse
 from django.utils._os import safe_join
-from django.utils.http import http_date
+from django.utils.cache import add_never_cache_headers, patch_cache_control
+from django.utils.http import http_date, url_has_allowed_host_and_scheme
 from django.views.static import was_modified_since
 
 RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
 CHUNK = 64 * 1024
 # Shown in the browser; anything else is downloaded.
 INLINE_TYPES = ("image/", "video/", "audio/", "application/pdf")
+# The post editor (also with ?place=…): its form posts to the page itself.
+EDITOR_PAGE = re.compile(r"^/manage/(new|\d+)/(\?|$)")
+LOGOUT_PAGE = re.compile(r"^/(manage|admin)/logout/")
+
+
+def _form_page(request):
+    """The page a form was sent from (same site, from the Referer), or ""."""
+    referer = request.META.get("HTTP_REFERER", "")
+    if not url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return ""
+    parts = urlsplit(referer)
+    if parts.path == reverse("login"):
+        return ""
+    return parts.path + (f"?{parts.query}" if parts.query else "")
+
+
+class LoginRequired(LoginRequiredMiddleware):
+    """Django's LoginRequiredMiddleware, but a button pressed after the session ended (a POST:
+    „Прочетох“, „Архивирай“…) comes back, after the login, to the page it was on, not to the
+    button's address: opened as a page, that would be an empty 405."""
+
+    def handle_no_permission(self, request, view_func):
+        if request.method in ("GET", "HEAD"):
+            return super().handle_no_permission(request, view_func)
+        page = _form_page(request) or request.get_full_path()
+        return redirect_to_login(page, resolve_url(self.get_login_url(view_func)), self.get_redirect_field_name(view_func))
+
+
+class PageMiddleware:
+    """Common rules for every page:
+
+    - Logged-in pages aren't kept by the browser (no-store): after „Изход“ the Back button can't show
+      the last person's page, and Back never shows an old list. The post editor only revalidates
+      (private, no-cache), so Back after a failed save still finds the text typed in it.
+    - A button-only address opened as a page (an old link, a bookmark) goes to the start page
+      (through the login page) instead of an empty "405 Method Not Allowed".
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if response.status_code == 405 and request.method == "GET":
+            return redirect("login")  # logged in: Login sends you on to your start page
+        if response.get("Content-Type", "").startswith("text/html") and not response.has_header("Cache-Control"):
+            if EDITOR_PAGE.match(request.get_full_path()):
+                patch_cache_control(response, private=True, no_cache=True)
+            else:
+                add_never_cache_headers(response)
+        return response
 
 
 class NoIndexMiddleware:
@@ -45,7 +100,20 @@ def robots_txt(request):
 
 def csrf_failure(request, reason=""):
     """A form came back with an expired security token (CSRF_FAILURE_VIEW): explained in
-    Bulgarian instead of Django's English technical page."""
+    Bulgarian instead of Django's English technical page.
+
+    Login and logout have nothing to lose, so they get a simpler way on: an old login page (e.g. a
+    second tab after logging in in the first) goes to the login page, which sends a logged-in user on
+    to the start page. An old „Изход“ button (after a login in another tab) gets a working „Изход“
+    button: an unchecked request never logs anybody out (a venue PC doesn't know its password)."""
+    if request.path == reverse("login"):
+        if not request.user.is_authenticated:
+            messages.info(request, "Страницата за вход беше стара. Влезте отново.")
+        return redirect(request.get_full_path())
+    if LOGOUT_PAGE.match(request.path):
+        if not request.user.is_authenticated:
+            return redirect("login")  # already out
+        return render(request, "403_csrf.html", {"logout": True}, status=403)
     return render(request, "403_csrf.html", status=403)
 
 

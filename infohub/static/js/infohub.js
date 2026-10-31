@@ -109,3 +109,21 @@ document.addEventListener("click", function (event) {
         box.hidden = false;
     });
 })();
+
+// A form is sent once: a second click (a double click, or an impatient one) while the first is on its
+// way does nothing, as in the post editor. Forms whose own script cancels them (a confirm dialog) or
+// sends them itself („Помогна ли ви?“) are left alone. Back to the page later: the buttons work again.
+document.addEventListener("submit", function (event) {
+    if (event.target.hasAttribute("data-sending")) {
+        event.preventDefault();
+        event.stopImmediatePropagation();  // no second confirm dialog either
+    }
+}, true);
+document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (event.defaultPrevented || (form.getAttribute("method") || "").toLowerCase() !== "post" || form.target === "_blank") return;
+    form.setAttribute("data-sending", "");
+});
+window.addEventListener("pageshow", function () {
+    document.querySelectorAll("form[data-sending]").forEach(function (form) { form.removeAttribute("data-sending"); });
+});

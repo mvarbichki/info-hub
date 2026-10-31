@@ -76,7 +76,7 @@ class UploadTests(InfoHubTestCase):
         self.assertEqual(Image.objects.get(pk=data["item"]["id"]).collection_id, department_collection(self.cms).pk)
 
     def test_upload_needs_post(self):
-        self.assertEqual(self.editor.get("/manage/upload/").status_code, 405)
+        self.assertRedirects(self.editor.get("/manage/upload/"), "/login/", fetch_redirect_response=False)  # button-only: no empty 405
 
 
 class SaveTests(InfoHubTestCase):
@@ -523,7 +523,7 @@ class CountingTests(InfoHubTestCase):
         self.assertEqual((stat.helpful, stat.not_helpful), (1, 0))
         self.assertContains(staff.get(guide.url), "Отговорихте „Да“")
         self.assertEqual(staff.post(f"/feedback/{guide.pk}/", {"helpful": "maybe"}).status_code, 400)
-        self.assertEqual(staff.get(f"/feedback/{guide.pk}/").status_code, 405)
+        self.assertRedirects(staff.get(f"/feedback/{guide.pk}/"), "/login/", fetch_redirect_response=False)  # button-only: no empty 405
 
 
 class NotHelpfulTests(InfoHubTestCase):
