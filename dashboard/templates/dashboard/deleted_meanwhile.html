@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Публикацията е изтрита{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <h1>Нищо не е запазено: публикацията е изтрита</h1>
+    <p>Докато я редактирахте, някой я е изтрил (заедно със снимките и файловете ѝ).</p>
+    <p>Натиснете <b>Назад</b> в браузъра – текстът ви е още там. Копирайте го и го поставете в
+        <a href="{% url 'dashboard:new' %}" target="_blank">нова публикация ↗</a>; снимките и файловете добавете отново.</p>
+    <p><a href="{% url 'dashboard:index' %}">Към списъка с публикации</a></p>
+</div>
+{% endblock %}

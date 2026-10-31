@@ -122,6 +122,9 @@ def _changed_meanwhile(request, page):
 def edit(request, pk=None):
     """The post editor: a new post (no pk) or an existing one; ?revision=<id> fills it with an older
     version (История), which is brought back only when it is saved."""
+    if pk and request.method == "POST" and not GuidePage.objects.filter(pk=pk).exists():
+        # deleted by somebody else while this editor was open: say so (Back still has the text)
+        return TemplateResponse(request, "dashboard/deleted_meanwhile.html", status=404)
     page = managed_page(request, GuidePage, pk) if pk else None
     latest = page.get_latest_revision_as_object() if page else None
     revision = _revision(request, page)

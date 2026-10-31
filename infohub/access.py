@@ -73,7 +73,9 @@ class PageMiddleware:
         response = self.get_response(request)
         if response.status_code == 405 and request.method == "GET":
             return redirect("login")  # logged in: Login sends you on to your start page
-        if response.get("Content-Type", "").startswith("text/html") and not response.has_header("Cache-Control"):
+        cache_control = response.get("Cache-Control", "")
+        if response.get("Content-Type", "").startswith("text/html") and "no-store" not in cache_control and "no-cache" not in cache_control:
+            # also when a view only said "private" (e.g. Wagtail's preview of a draft)
             if EDITOR_PAGE.match(request.get_full_path()):
                 patch_cache_control(response, private=True, no_cache=True)
             else:

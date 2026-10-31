@@ -327,6 +327,8 @@ class BrowserHabitsTests(InfoHubTestCase):
             cache_control = client.get(url)["Cache-Control"]
             self.assertIn("no-store", cache_control, url)
             self.assertIn("private", cache_control, url)
+        preview = self.editor.get(f"/manage/{self.rules.pk}/preview/")["Cache-Control"]
+        self.assertIn("no-store", preview)  # a view that only said "private" (Wagtail's preview)
         for url in ("/manage/new/", f"/manage/new/?place={self.marketing.pk}", f"/manage/{self.rules.pk}/"):
             cache_control = self.editor.get(url)["Cache-Control"]
             self.assertIn("no-cache", cache_control, url)  # revalidated, but Back keeps the typed text

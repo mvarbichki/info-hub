@@ -658,6 +658,15 @@ class ConflictTests(InfoHubTestCase):
         response, _ = self.save_post(self.mk, url=self.url, title="Поправено", base_revision=old)
         self.assertIn("data-conflict", self.html(response))
 
+    def test_deleted_while_being_edited(self):
+        self.boss.post(f"/manage/{self.post.pk}/delete/")
+        response, _ = self.save_post(self.mk, url=self.url, title="Моята", base_revision="1")
+        self.assertContains(response, "Нищо не е запазено: публикацията е изтрита", status_code=404)
+        self.assertContains(response, "Назад", status_code=404)
+        self.assertEqual(self.mk.get(self.url).status_code, 404)  # opening it: the usual 404
+        self.assertEqual(self.mk.post("/manage/999999/", {}).status_code, 404)  # never existed: same message, nothing saved
+        self.assertFalse(GuidePage.objects.filter(draft_title="Моята").exists())
+
     def test_no_conflict_cases(self):
         response, _ = self.save_post(self.mk, url=self.url, title="Без поле")  # an old open form without the field
         self.assertEqual(response.status_code, 302)
