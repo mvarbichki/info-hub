@@ -95,6 +95,32 @@ class LoginTests(InfoHubTestCase):
         response = self.client_for(self.admin).post("/admin/logout/")
         self.assertTrue(response["Location"].startswith("/login/"))
 
+    def test_a_double_logout_and_the_next_login(self):
+        """VM 2026-10-31: „Изход“ sent twice; the second logout came from someone already logged out
+        and went to /login/?next=/manage/logout/, so after the next login the browser opened the logout
+        address and showed an empty 405 page."""
+        client, _ = self.login("pernik_staff", PASSWORD)
+        self.assertRedirects(client.post("/manage/logout/"), "/login/", fetch_redirect_response=False)
+        second = client.post("/manage/logout/")
+        self.assertRedirects(second, "/login/", fetch_redirect_response=False)  # no "next"
+        page = client.get("/login/")
+        self.assertEqual(page.content.decode().count("Излязохте успешно"), 1)
+        response = client.post("/login/", {"username": "pernik_manager", "password": PASSWORD}, follow=True)
+        self.assertEqual(response.redirect_chain, [("/", 302)])
+        self.assertContains(response, "Изход (pernik_manager)")
+
+    def test_the_logout_address_opened_as_a_page(self):
+        manager = self.client_for(self.pernik_manager)
+        self.assertRedirects(manager.get("/manage/logout/"), "/login/", fetch_redirect_response=False)
+        self.assertContains(manager.get("/"), "Изход (pernik_manager)")  # a visit logs nobody out
+        self.assertRedirects(Client().get("/manage/logout/"), "/login/", fetch_redirect_response=False)
+        # an old "log in, then log out" link: the login page drops it
+        self.assertRedirects(Client().get("/login/?next=/manage/logout/"), "/login/", fetch_redirect_response=False)
+        client = Client()
+        response = client.post("/login/?next=/manage/logout/", {"username": "pernik_manager", "password": PASSWORD}, follow=True)
+        self.assertEqual(response.redirect_chain[-1], ("/", 302))
+        self.assertContains(response, "Изход (pernik_manager)")
+
 
 class VenueAccountLimitsTests(InfoHubTestCase):
     def test_venue_accounts_have_no_panel_and_no_admin(self):

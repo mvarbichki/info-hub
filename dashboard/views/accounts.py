@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 
@@ -18,6 +19,7 @@ from ..forms import LoginForm
 from ..models import must_change_password, set_must_change_password
 
 EDITOR_PAGE = re.compile(r"^/manage/(new|\d+)/$")
+LOGOUT_PAGE = re.compile(r"^/(manage|admin)/logout/")
 
 
 def client_ip(request):
@@ -43,6 +45,8 @@ class Login(LoginView):
     LOCK_SECONDS = 15 * 60
 
     def dispatch(self, request, *args, **kwargs):
+        if request.method == "GET" and LOGOUT_PAGE.match(request.GET.get(self.redirect_field_name, "")):
+            return redirect("login")  # "log in, then log out" is never meant (an old double logout)
         self.redirect_authenticated_user = not request.GET.get(self.redirect_field_name)
         if request.user.is_authenticated and not self.redirect_authenticated_user:
             list(messages.get_messages(request))  # e.g. Wagtail's English "no permission"; the page says it in Bulgarian
@@ -68,6 +72,10 @@ class Login(LoginView):
             self.request.session.set_expiry(settings.INFOHUB_VENUE_SESSION_DAYS * 24 * 3600)
         return response
 
+    def get_redirect_url(self):
+        url = super().get_redirect_url()
+        return "" if LOGOUT_PAGE.match(url) else url
+
     def get_default_redirect_url(self):
         return reverse("dashboard:index") if is_editor(self.request.user) else "/"
 
@@ -78,14 +86,27 @@ class Login(LoginView):
         return context
 
 
+@method_decorator(login_not_required, name="dispatch")
 class Logout(LogoutView):
-    """Used for /manage/logout/, the manage bar and the Wagtail admin's log out: back to the login page."""
+    """Used for /manage/logout/, the manage bar and the Wagtail admin's log out: back to the login page.
 
+    Open to everybody: a double click on „Изход“ sends a second logout after the first one, and that
+    must not land on the login page with "next=/manage/logout/" (after the next login the browser
+    would open the logout address and get an empty 405 page). A plain visit (GET) logs nobody out
+    (that needs the form's CSRF token); it only goes to the login page.
+    """
+
+    http_method_names = ["get", "post", "options"]
     next_page = "login"
 
+    def get(self, request, *args, **kwargs):
+        return redirect("login")
+
     def post(self, request, *args, **kwargs):
+        was_logged_in = request.user.is_authenticated
         response = super().post(request, *args, **kwargs)
-        messages.success(request, "Излязохте успешно.")
+        if was_logged_in:
+            messages.success(request, "Излязохте успешно.")
         return response
 
 
