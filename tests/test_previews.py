@@ -1,9 +1,11 @@
 """Files inside a step, and the PDF copies of Word/Excel/PowerPoint/text/CSV files shown in the post."""
 
+import codecs
 import io
 import json
 import os
 import re
+import zlib
 from pathlib import Path
 from unittest import mock, skipUnless
 
@@ -26,6 +28,12 @@ def fake_libreoffice(command, **kwargs):
     """Writes file.pdf next to the source, like `soffice --convert-to pdf --outdir <folder>`."""
     folder = Path(command[command.index("--outdir") + 1])
     (folder / "file.pdf").write_bytes(FAKE_PDF)
+
+
+def pdf_with_text_of(size):
+    """A PDF whose page text is `size` points, in a compressed stream as LibreOffice writes it."""
+    content = zlib.compress(f"BT /F1 {size} Tf (x) Tj ET".encode())
+    return b"%PDF-1.4\n1 0 obj << /Filter /FlateDecode >>\nstream\n" + content + b"\nendstream\nendobj\n"
 
 
 def libreoffice_here():
@@ -109,6 +117,9 @@ class PreviewTests(InfoHubTestCase):
         self.assertIn("--headless", command)
         self.assertTrue(any(part.startswith("-env:UserInstallation=file:") for part in command))
         self.assertEqual(command[command.index("--convert-to") + 1], "pdf")
+        # LibreOffice converts nothing (and waits) when --outdir comes first
+        self.assertLess(command.index("--convert-to"), command.index("--outdir"))
+        self.assertEqual(command[-1].rsplit(os.sep, 1)[-1], "file.docx")
 
     def test_a_spreadsheet_keeps_each_sheet_on_one_page(self):
         self.upload(self.editor, SimpleUploadedFile("Таблица.xlsx", b"PK excel"), "file")
@@ -175,6 +186,67 @@ class PreviewTests(InfoHubTestCase):
         self.assertEqual(source.decode("utf-8"), "Смяна на тонера")
         _, source = self.converted("стар.csv", "Вид;Място\nПринтер;Каса\n".encode("cp1251"))
         self.assertEqual(source.decode("utf-8"), "Вид;Място\nПринтер;Каса\n")
+
+    def test_unicode_text_from_excel_or_notepad_is_read_right(self):
+        """Excel's „Unicode Text“ and Notepad's „Unicode“ are UTF-16 (tab separated for Excel)."""
+        _, source = self.converted("unicode.txt", "Смяна на тонера\r\n".encode("utf-16"))
+        self.assertEqual(source.decode("utf-8"), "Смяна на тонера\r\n")
+        command, source = self.converted("unicode.csv", codecs.BOM_UTF16_BE + "Вид\tМясто\r\nПринтер\tКаса\r\n".encode("utf-16-be"))
+        self.assertIn("--infilter=Text - txt - csv (StarCalc):9,34,76,1,,,true,false", command)
+        self.assertEqual(source.decode("utf-8"), "Вид\tМясто\r\nПринтер\tКаса\r\n")
+
+    def test_odd_text_files_still_get_a_copy(self):
+        command, _ = self.converted("един.csv", "Принтер\nСкенер\n".encode("utf-8"))  # one column: no separator
+        self.assertIn("--infilter=Text - txt - csv (StarCalc):44,34,76,1,,,true,false", command)
+        _, source = self.converted("счупен.txt", b"ok \x98 ok")  # neither UTF-8 nor Windows-1251
+        self.assertEqual(source.decode("utf-8"), "ok \ufffd ok")
+
+    def test_an_empty_file_has_no_copy(self):
+        self.run.reset_mock()
+        for name in ("празен.txt", "празен.csv", "празен.docx"):
+            item = self.upload(self.editor, SimpleUploadedFile(name, b""), "file")[1]["item"]
+            self.assertFalse(DocumentPreview.objects.filter(document_id=item["id"]).exists())
+        self.run.assert_not_called()
+
+    def test_a_very_long_sheet_is_shown_on_pages(self):
+        """Shrunk to unreadable text on one page, the sheet is made again on A4 pages."""
+        targets = []
+
+        def run(command, **kwargs):
+            target = command[command.index("--convert-to") + 1]
+            targets.append(target)
+            folder = Path(command[command.index("--outdir") + 1])
+            (folder / "file.pdf").write_bytes(pdf_with_text_of(0.25 if target != "pdf" else 10))
+
+        self.run.side_effect = run
+        item = self.upload(self.editor, SimpleUploadedFile("дълга.xlsx", b"PK"), "file")[1]["item"]
+        self.assertEqual(len(targets), 2)
+        self.assertIn('"SinglePageSheets"', targets[0])
+        self.assertEqual(targets[1], "pdf")
+        with DocumentPreview.objects.get(document_id=item["id"]).file.open("rb") as f:
+            self.assertIn(zlib.compress(b"BT /F1 10 Tf (x) Tj ET"), f.read())
+
+        targets.clear()  # readable text: one try
+        self.run.side_effect = lambda command, **kwargs: (targets.append(1), fake_libreoffice(command))
+        self.upload(self.editor, SimpleUploadedFile("къса.xlsx", b"PK"), "file")
+        self.assertEqual(len(targets), 1)
+
+    def test_both_tries_share_the_time_limit(self):
+        clock = [1000.0]
+
+        def slow(command, **kwargs):
+            self.assertLessEqual(kwargs["timeout"], 120)
+            clock[0] += 125  # the first try used up the time
+            folder = Path(command[command.index("--outdir") + 1])
+            (folder / "file.pdf").write_bytes(pdf_with_text_of(0.25))
+
+        self.run.reset_mock()
+        self.run.side_effect = slow
+        with mock.patch("guides.previews.time") as fake_time:
+            fake_time.monotonic.side_effect = lambda: clock[0]
+            item = self.upload(self.editor, SimpleUploadedFile("бавна.xlsx", b"PK"), "file")[1]["item"]
+        self.assertFalse(DocumentPreview.objects.filter(document_id=item["id"]).exists())
+        self.assertEqual(self.run.call_count, 1)  # no time left for the second try
 
     def test_a_failed_conversion_leaves_the_file_download_only(self):
         for failure in (lambda *a, **k: None, OSError("missing")):
@@ -247,3 +319,11 @@ class RealLibreOfficeTests(InfoHubTestCase):
                 item = self.upload(self.client_for(self.marketing_editor), SimpleUploadedFile(name, data), "file")[1]["item"]
             with DocumentPreview.objects.get(document_id=item["id"]).file.open("rb") as f:
                 self.assertEqual(len(re.findall(rb"/Type\s*/Page(?!s)", f.read())), 1, name)
+
+    def test_a_real_very_long_sheet_is_shown_on_pages(self):
+        rows = "".join(f"{i};Принтер;Каса {i % 9}\n" for i in range(20000))
+        with override_settings(INFOHUB_SOFFICE=libreoffice_here()):
+            upload = SimpleUploadedFile("дълъг инвентар.csv", ("№;Вид;Място\n" + rows).encode("utf-8"))
+            item = self.upload(self.client_for(self.marketing_editor), upload, "file")[1]["item"]
+        with DocumentPreview.objects.get(document_id=item["id"]).file.open("rb") as f:
+            self.assertGreater(len(re.findall(rb"/Type\s*/Page(?!s)", f.read())), 100)

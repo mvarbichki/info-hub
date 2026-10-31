@@ -21,7 +21,7 @@ names what broke. One part only: `manage.py test tests.test_audience` (file) or
 | `test_panel.py` | Потребители, Обекти, password sheet, Раздели (incl. ↑ ↓ order), Категории, Статистика, login-name suggestions |
 | `test_edges.py` | Edge cases: hostile text in titles/captions/names shown as text everywhere, login `next` to other sites ignored, odd search input, unknown ids, length limits, section order, `/django-admin/` gone |
 | `test_settings.py` | Error log, 500 page, MariaDB check, setup commands |
-| `test_previews.py` | Files inside a step, PDF copies of Word/Excel/PowerPoint/TXT/CSV (encoding, CSV separator, made, shown, protected, deleted, `make_previews`, a sheet on one page); a real LibreOffice run where it is installed (also a wide table, TXT and CSV) |
+| `test_previews.py` | Files inside a step, PDF copies of Word/Excel/PowerPoint/TXT/CSV (encoding incl. UTF-16, CSV separator, empty files, very long sheets on A4 pages, the shared time limit, made, shown, protected, deleted, `make_previews`, a sheet on one page); a real LibreOffice run where it is installed (also a wide table, TXT and CSV, a 20 000-row CSV) |
 | `test_check_site.py` | `manage.py check_site`: OK on a healthy site, changes nothing, finds missing files, wrong rights, inconsistent audience, stale search text |
 | `test_js.py` + `js/` | The site's JavaScript (editor, „Кой да я вижда“, „Нов потребител“, PDF inside a post) in jsdom on freshly rendered pages |
 

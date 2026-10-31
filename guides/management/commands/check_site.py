@@ -147,7 +147,8 @@ class Command(BaseCommand):
                 if not obj.file or not obj.file.storage.exists(obj.file.name):
                     missing += 1
                     self.bad(f"{model.__name__} #{obj.pk}: файлът липсва на диска ({obj.file.name})")
-        without = [d.title for d in Document.objects.filter(preview__isnull=True) if d.file_extension.lower() in CONVERTIBLE]
+        without = [d.title for d in Document.objects.filter(preview__isnull=True)
+                   if d.file_extension.lower() in CONVERTIBLE and d.file_size != 0]  # an empty file gets none
         self.notes.append(
             f"снимки {Image.objects.count()}, файлове {Document.objects.count()}, PDF копия {DocumentPreview.objects.count()}"
             + (f"; без PDF копие: {', '.join(without)} (manage.py make_previews)" if without else "")

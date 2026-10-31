@@ -3,11 +3,17 @@
 the original file. Without LibreOffice, or if a file can't be converted, it is simply download-only.
 """
 
+import codecs
+import collections
 import csv
 import logging
+import math
+import re
 import shutil
 import subprocess
 import tempfile
+import time
+import zlib
 from pathlib import Path
 
 from django.conf import settings
@@ -24,10 +30,15 @@ CONVERTIBLE = {"doc", "docx", "odt", "rtf", "xls", "xlsx", "ods", "ppt", "pptx",
 SPREADSHEETS = {"xls", "xlsx", "ods", "csv"}
 # A sheet on one page of its own size: printed onto A4, a wide table is cut into several pages.
 WHOLE_SHEETS = 'pdf:calc_pdf_Export:{"SinglePageSheets":{"type":"boolean","value":"true"}}'
-# Text and CSV are read as UTF-8; older Bulgarian files may be Windows-1251.
+# A very long sheet is shrunk to fit the largest PDF page; the viewer zooms back at most 5×, so text
+# below this size (in points, normal is 10) stays unreadable: such a sheet is shown on A4 pages instead.
+READABLE_TEXT_PT = 2
+# Text and CSV are read as UTF-8; older Bulgarian files may be Windows-1251. „Unicode“ files from
+# Excel or Notepad are UTF-16 and start with its byte order mark.
 TEXT_ENCODINGS = ("utf-8-sig", "cp1251")
+UTF16_MARKS = (codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
 CSV_SEPARATORS = ",;\t|"
-# A large spreadsheet may take a while; after this the file stays download-only.
+# A large spreadsheet may take a while; after this (for all tries together) the file stays download-only.
 TIMEOUT_SECONDS = 120
 WINDOWS_PATH = Path("C:/Program Files/LibreOffice/program/soffice.exe")
 
@@ -45,7 +56,8 @@ def soffice():
 def _as_utf8(source):
     """Rewrite a text/CSV file as UTF-8 (LibreOffice is told so) and return its text."""
     data = source.read_bytes()
-    for encoding in TEXT_ENCODINGS:
+    encodings = ("utf-16",) if data.startswith(UTF16_MARKS) else TEXT_ENCODINGS
+    for encoding in encodings:
         try:
             text = data.decode(encoding)
             break
@@ -73,6 +85,27 @@ def _input_filter(source, extension):
     return []
 
 
+def _convert(base, target, source, deadline):
+    timeout = deadline - time.monotonic()
+    if timeout <= 0:
+        raise subprocess.TimeoutExpired(base[0], TIMEOUT_SECONDS)
+    # --convert-to must come before --outdir: the other way round LibreOffice converts nothing and waits
+    command = [*base, "--convert-to", target, "--outdir", str(source.parent), str(source)]
+    subprocess.run(command, capture_output=True, timeout=timeout, check=False)
+
+
+def _text_size(pdf):
+    """The most common font size in the PDF's pages (LibreOffice writes „<size> Tf“ in compressed
+    streams), or infinity if none is found: then the copy is kept as it is."""
+    sizes = collections.Counter()
+    for stream in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", pdf.read_bytes(), re.S):
+        try:
+            sizes.update(re.findall(rb"([\d.]+) Tf\b", zlib.decompress(stream.group(1))))
+        except zlib.error:
+            continue
+    return float(sizes.most_common(1)[0][0]) if sizes else math.inf
+
+
 def make_preview(document):
     """Store a PDF copy of a Word/Excel/PowerPoint/text/CSV document. Returns it or None."""
     extension = document.file_extension.lower()
@@ -84,17 +117,25 @@ def make_preview(document):
         source = folder / f"file.{extension}"
         with document.file.open("rb") as original, source.open("wb") as copy:
             shutil.copyfileobj(original, copy)
-        command = [
+        if not source.stat().st_size:
+            return None  # nothing to show
+        base = [
             program, f"-env:UserInstallation={(folder / 'profile').as_uri()}",  # own profile: runs in parallel
             "--headless", "--norestore", *_input_filter(source, extension),
-            "--convert-to", WHOLE_SHEETS if extension in SPREADSHEETS else "pdf", "--outdir", str(folder), str(source),
         ]
+        pdf = folder / "file.pdf"
+        deadline = time.monotonic() + TIMEOUT_SECONDS
         try:
-            subprocess.run(command, capture_output=True, timeout=TIMEOUT_SECONDS, check=False)
+            if extension in SPREADSHEETS:
+                _convert(base, WHOLE_SHEETS, source, deadline)
+                if pdf.is_file() and _text_size(pdf) < READABLE_TEXT_PT:
+                    pdf.unlink()
+                    _convert(base, "pdf", source, deadline)
+            else:
+                _convert(base, "pdf", source, deadline)
         except (OSError, subprocess.TimeoutExpired) as error:
             logger.warning("No PDF copy of document %s: %s", document.pk, error)
             return None
-        pdf = folder / "file.pdf"
         if not pdf.is_file() or not pdf.stat().st_size:
             logger.warning("No PDF copy of document %s: LibreOffice made no PDF", document.pk)
             return None
