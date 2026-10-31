@@ -110,8 +110,9 @@ def edit_user(request, pk):
             account.username = data["username"]
             account.save(update_fields=["username"])
         if venue_account is not None:
-            set_venue_role(account, data["venue"], data["role"])
-            messages.success(request, f"„{account.username}“: {ROLE_LABELS[data['role']].lower()} {data['venue'].name}.")
+            forgotten = set_venue_role(account, data["venue"], data["role"])
+            note = " Потвържденията му „Прочетох“ (при друг обект – и отворените публикации) започват отначало." if forgotten else ""
+            messages.success(request, f"„{account.username}“: {ROLE_LABELS[data['role']].lower()} {data['venue'].name}.{note}")
         else:
             set_department(account, data["department"])
             messages.success(request, f"„{account.username}“: редактор на {data['department'].title}.")

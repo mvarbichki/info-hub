@@ -159,3 +159,30 @@ class SummaryTests(InfoHubTestCase):
         _, guide = self.save_post(self.client_for(self.admin), title="За много", all_venues=None,
                                   staff_venues=[v.pk for v in venues])
         self.assertIn("6 обекта", summary(guide))
+
+
+class ModelAndReportEdgeTests(InfoHubTestCase):
+    def test_a_post_for_chosen_venues_needs_a_venue_in_the_admin_too(self):
+        from django.core.exceptions import ValidationError
+
+        from guides.models import AUDIENCE_STAFF, GuidePage
+
+        _, guide = self.save_post(self.client_for(self.marketing_editor), title="Без обект")
+        guide = GuidePage.objects.get(pk=guide.pk)
+        guide.audience = AUDIENCE_STAFF
+        with self.assertRaisesMessage(ValidationError, "Изберете поне един обект"):
+            guide.clean()
+
+    def test_a_search_that_found_something_later_is_no_longer_failed(self):
+        import datetime
+
+        from stats.models import SearchStat
+        from stats.reports import failed_searches
+
+        today = datetime.date.today()
+        yesterday = today - datetime.timedelta(days=1)
+        rows = [("щжюзъ", yesterday, 0), ("щжюзъ", today, 3),  # found later: not a gap any more
+                ("ьъюящ", yesterday, 2), ("ьъюящ", today, 0)]  # found before, nothing now: a gap
+        for query, day, results in rows:
+            SearchStat.objects.create(query=query, venue=self.pernik, role="staff", day=day, count=1, results=results)
+        self.assertEqual([e["query"] for e in failed_searches(venue=self.pernik)], ["ьъюящ"])

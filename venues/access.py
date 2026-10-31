@@ -122,8 +122,22 @@ def renew_passwords(venues):
 
 
 def set_venue_role(user, venue, role):
-    """Move a venue account to another venue and/or role. Takes effect on its next page."""
-    VenueAccount.objects.filter(user=user).update(venue=venue, role=role)
+    """Move a venue account to another venue and/or role. Takes effect on its next page.
+
+    Its „Прочетох“ confirmations (and, on another venue, what it opened) were given for the old
+    venue / role: they are forgotten, so the reports never credit a venue with what it didn't do;
+    they ask again instead. Returns True if anything was forgotten."""
+    from stats.models import Ack, Seen
+
+    account = VenueAccount.objects.get(user=user)
+    if (account.venue_id, account.role) == (venue.pk, role):
+        return False
+    forgotten, _ = Ack.objects.filter(user=user).delete()
+    if account.venue_id != venue.pk:
+        forgotten += Seen.objects.filter(user=user).delete()[0]
+    account.venue, account.role = venue, role
+    account.save(update_fields=["venue", "role"])
+    return bool(forgotten)
 
 
 def set_active(venue, active):

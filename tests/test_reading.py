@@ -267,6 +267,66 @@ class AcknowledgeTests(InfoHubTestCase):
         self.assertIn("<b>0 / 2</b> обекта", page)
         self.assertNotIn("Без акаунт на управител", page)
 
+    def test_moving_a_manager_to_another_venue_forgets_what_it_did(self):
+        """A confirmation was given for the old venue: it must not move with the account."""
+        boss = self.client_for(self.admin)
+        url = f"/manage/users/{self.pernik_manager.pk}/"
+        self.manager.get(self.rules.url)
+        self.manager.post(f"/read/{self.rules.pk}/")
+        boss.post(url, {"username": "pernik_manager", "role": "manager", "venue": self.pernik.pk})  # nothing changed
+        self.assertEqual(Ack.objects.filter(user=self.pernik_manager).count(), 1)
+        response = boss.post(url, {"username": "pernik_manager", "role": "manager", "venue": self.sah.pk}, follow=True)
+        self.assertContains(response, "Потвържденията му „Прочетох“ (при друг обект – и отворените публикации) започват отначало.")
+        self.assertFalse(Ack.objects.filter(user=self.pernik_manager).exists())
+        self.assertFalse(Seen.objects.filter(user=self.pernik_manager).exists())
+        _, everyone = self.save_post(self.editor, title="За всички", needs_ack="on")
+        page = self.html(self.editor.get(f"/manage/{everyone.pk}/reads/"))
+        self.assertIn("<b>0 / 1</b> обекта", page)  # Перник has no manager now; Младост has two
+        self.assertIn("Без акаунт на управител (не могат да потвърдят): Перник.", page)
+
+    def test_a_role_change_forgets_the_confirmations(self):
+        boss = self.client_for(self.admin)
+        Ack.objects.create(guide=self.rules, user=self.pernik_staff)  # a staff click from before the change
+        self.staff.get(self.rules.url)
+        boss.post(f"/manage/users/{self.pernik_staff.pk}/", {"username": "pernik_staff", "role": "manager", "venue": self.pernik.pk})
+        self.assertFalse(Ack.objects.filter(user=self.pernik_staff).exists())  # would count as the venue's now
+        self.assertTrue(Seen.objects.filter(user=self.pernik_staff).exists())  # same venue: still opened
+        self.assertContains(self.editor.get(f"/manage/{self.rules.pk}/reads/"), "<b>0 / 1</b> обекта")
+
+    def test_confirmations_of_venues_no_longer_in_the_audience_dont_count(self):
+        self.manager.post(f"/read/{self.rules.pk}/")
+        self.assertContains(self.editor.get("/manage/"), "Потвърдили: 1 / 1")
+        self.save_post(self.editor, url=f"/manage/{self.rules.pk}/", title="Нови правила", all_venues=None,
+                       manager_venues=[self.sah.pk], needs_ack="on")
+        self.assertContains(self.editor.get("/manage/"), "Потвърдили: 0 / 1")
+        page = self.html(self.editor.get(f"/manage/{self.rules.pk}/reads/"))
+        self.assertIn("Още не са потвърдили: София – Младост.", page)
+        self.assertNotIn("pernik_", page)
+
+    def test_the_training_manager_can_try_it_but_isnt_counted(self):
+        from venues.models import MANAGER
+
+        trainer = self.training.accounts.get(role=MANAGER).user
+        from .base import PASSWORD
+
+        trainer.set_password(PASSWORD)
+        trainer.save()
+        client = self.client_for(trainer)
+        _, everyone = self.save_post(self.editor, title="За всички", needs_ack="on")
+        self.assertIn(">Прочетох и запознах екипа</button>", self.html(client.get(everyone.url)))
+        client.post(f"/read/{everyone.pk}/")
+        self.assertIn("✓ Потвърдено", self.html(client.get(everyone.url)))
+        self.assertContains(self.editor.get(f"/manage/{everyone.pk}/reads/"), "<b>0 / 2</b> обекта")
+
+    def test_switching_the_request_off(self):
+        self.save_post(self.editor, url=f"/manage/{self.rules.pk}/", title="Нови правила", all_venues=None,
+                       staff_venues=[self.pernik.pk])
+        GuidePage.objects.filter(pk=self.rules.pk).update(first_published_at=timezone.now() - timedelta(days=90))
+        self.assertNotIn("Нови правила", section(self.html(self.manager.get("/")), "Нови за вас"))
+        self.assertNotIn("/read/", self.html(self.manager.get(self.rules.url)))
+        self.assertEqual(self.manager.post(f"/read/{self.rules.pk}/").status_code, 404)
+        self.assertNotContains(self.editor.get("/manage/"), "Потвърдили:")
+
     def test_report_access(self):
         self.assertTrue(self.staff.get(f"/manage/{self.rules.pk}/reads/")["Location"].startswith("/login/"))
         self.assertEqual(self.client_for(self.cms_editor).get(f"/manage/{self.rules.pk}/reads/").status_code, 404)
