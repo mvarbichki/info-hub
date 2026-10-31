@@ -70,7 +70,7 @@ def save_upload(uploaded, kind, collection, user):
     if kind == "file":
         from .previews import make_preview
 
-        make_preview(document)  # Word/Excel/PowerPoint: a PDF copy to show in the post
+        make_preview(document)  # Word/Excel/PowerPoint/text/CSV: a PDF copy to show in the post
     return document, warning
 
 

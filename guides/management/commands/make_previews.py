@@ -5,7 +5,7 @@ from guides.previews import CONVERTIBLE, make_preview, soffice
 
 
 class Command(BaseCommand):
-    help = "PDF копия на Word/Excel/PowerPoint файловете, които още нямат (напр. качени преди тази функция)."
+    help = "PDF копия на Word/Excel/PowerPoint/TXT/CSV файловете, които още нямат (напр. качени преди тази функция)."
 
     def add_arguments(self, parser):
         parser.add_argument("--all", action="store_true", help="Направи наново и съществуващите копия.")

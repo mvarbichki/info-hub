@@ -110,7 +110,7 @@ class DepartmentMedia(models.Model):
 
 
 class DocumentPreview(models.Model):
-    """A PDF copy of an uploaded Word/Excel/PowerPoint file (guides/previews.py), shown in the post
+    """A PDF copy of an uploaded Word/Excel/PowerPoint/text/CSV file (guides/previews.py), shown in the post
     like a PDF. Served with the same checks as the file itself; deleted with it."""
 
     document = models.OneToOneField("wagtaildocs.Document", on_delete=models.CASCADE, related_name="preview")

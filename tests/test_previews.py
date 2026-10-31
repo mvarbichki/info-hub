@@ -1,4 +1,4 @@
-"""Files inside a step, and the PDF copies of Word/Excel/PowerPoint files shown in the post."""
+"""Files inside a step, and the PDF copies of Word/Excel/PowerPoint/text/CSV files shown in the post."""
 
 import io
 import json
@@ -138,11 +138,43 @@ class PreviewTests(InfoHubTestCase):
 
     def test_no_copy_for_other_files_or_without_libreoffice(self):
         pdf = self.upload(self.editor, SimpleUploadedFile("a.pdf", b"%PDF"), "file")[1]["item"]
-        text = self.upload(self.editor, SimpleUploadedFile("a.txt", b"x"), "file")[1]["item"]
-        self.assertFalse(DocumentPreview.objects.filter(document_id__in=[pdf["id"], text["id"]]).exists())
+        archive = self.upload(self.editor, SimpleUploadedFile("a.zip", b"PK"), "file")[1]["item"]
+        self.assertFalse(DocumentPreview.objects.filter(document_id__in=[pdf["id"], archive["id"]]).exists())
         with override_settings(INFOHUB_SOFFICE="off"):
             excel = self.upload(self.editor, SimpleUploadedFile("t.xlsx", b"PK"), "file")[1]["item"]
         self.assertFalse(DocumentPreview.objects.filter(document_id=excel["id"]).exists())
+
+    def converted(self, name, data):
+        """Upload a file; returns the command LibreOffice got and the source file as it was handed over."""
+        handed = {}
+
+        def run(command, **kwargs):
+            handed["source"] = Path(command[-1]).read_bytes()
+            fake_libreoffice(command)
+
+        self.run.side_effect = run
+        item = self.upload(self.editor, SimpleUploadedFile(name, data), "file")[1]["item"]
+        self.assertTrue(DocumentPreview.objects.filter(document_id=item["id"]).exists())
+        return self.run.call_args.args[0], handed["source"]
+
+    def test_text_and_csv_get_a_copy_too(self):
+        command, source = self.converted("Бележки.txt", "Принтер на рецепция\r\n".encode("utf-8"))
+        self.assertIn("--infilter=Text (encoded):UTF8", command)
+        self.assertEqual(command[command.index("--convert-to") + 1], "pdf")
+        self.assertEqual(source, "Принтер на рецепция\r\n".encode("utf-8"))  # line ends kept
+
+        command, _ = self.converted("Инвентар.csv", "№;Вид\n1;Принтер\n2;Скенер\n".encode("utf-8-sig"))
+        self.assertIn("--infilter=Text - txt - csv (StarCalc):59,34,76,1,,,true,false", command)  # ; read as the separator
+        self.assertIn('"SinglePageSheets"', command[command.index("--convert-to") + 1])
+        command, _ = self.converted("export.csv", b"id,name,place\n1,PC,desk\n2,printer,hall\n")
+        self.assertIn("--infilter=Text - txt - csv (StarCalc):44,34,76,1,,,true,false", command)
+
+    def test_an_old_cyrillic_text_file_is_read_right(self):
+        """Older Windows programs save Bulgarian text as Windows-1251; LibreOffice gets it as UTF-8."""
+        _, source = self.converted("стар.txt", "Смяна на тонера".encode("cp1251"))
+        self.assertEqual(source.decode("utf-8"), "Смяна на тонера")
+        _, source = self.converted("стар.csv", "Вид;Място\nПринтер;Каса\n".encode("cp1251"))
+        self.assertEqual(source.decode("utf-8"), "Вид;Място\nПринтер;Каса\n")
 
     def test_a_failed_conversion_leaves_the_file_download_only(self):
         for failure in (lambda *a, **k: None, OSError("missing")):
@@ -206,3 +238,12 @@ class RealLibreOfficeTests(InfoHubTestCase):
             item = self.upload(self.client_for(self.marketing_editor), upload, "file")[1]["item"]
         with DocumentPreview.objects.get(document_id=item["id"]).file.open("rb") as f:
             self.assertEqual(len(re.findall(rb"/Type\s*/Page(?!s)", f.read())), 1)
+
+    def test_real_text_and_csv_become_pdfs(self):
+        files = {"бележки.txt": "Смяна на тонера\r\nСтъпка 1\r\n".encode("cp1251"),
+                 "инвентар.csv": "№;Вид;Място\n1;Принтер;Каса\n".encode("utf-8-sig")}
+        for name, data in files.items():
+            with override_settings(INFOHUB_SOFFICE=libreoffice_here()):
+                item = self.upload(self.client_for(self.marketing_editor), SimpleUploadedFile(name, data), "file")[1]["item"]
+            with DocumentPreview.objects.get(document_id=item["id"]).file.open("rb") as f:
+                self.assertEqual(len(re.findall(rb"/Type\s*/Page(?!s)", f.read())), 1, name)

@@ -150,7 +150,7 @@ class Command(BaseCommand):
         without = [d.title for d in Document.objects.filter(preview__isnull=True) if d.file_extension.lower() in CONVERTIBLE]
         self.notes.append(
             f"снимки {Image.objects.count()}, файлове {Document.objects.count()}, PDF копия {DocumentPreview.objects.count()}"
-            + (f"; Word/Excel без PDF копие: {', '.join(without)} (manage.py make_previews)" if without else "")
+            + (f"; без PDF копие: {', '.join(without)} (manage.py make_previews)" if without else "")
         )
 
     def accounts(self):
