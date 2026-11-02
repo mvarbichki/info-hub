@@ -46,7 +46,7 @@ function feedbackPage(answer) {
     w.sent = [];
     w.fetch = (url, options) => {
         w.sent.push(Object.fromEntries(options.body.entries()));
-        return Promise.resolve({ ok: answer.ok, json: () => Promise.resolve(answer.json || {}) });
+        return Promise.resolve({ ok: answer.ok, redirected: Boolean(answer.redirected), json: () => Promise.resolve(answer.json || {}) });
     };
     w.matchMedia = () => ({ matches: false });
     w.eval(src);
@@ -92,6 +92,16 @@ function press(w, button) {
     await tick(); await tick();
     check("refused by the server: its message, form stays", !f.querySelector(".feedback__form").hidden
         && f.querySelector("[data-feedback-error]").textContent === "Сървърът каза не.");
+
+    // Logged out meanwhile: fetch follows the redirect to the login page (200), nothing was stored.
+    w = feedbackPage({ ok: true, redirected: true }); f = w.document;
+    f.querySelector("[data-feedback-no]").click();
+    f.querySelector("textarea[name=reason]").value = "Няма снимка";
+    press(w, f.querySelector(".feedback__reason button[value=no]"));
+    await tick(); await tick();
+    check("logged out meanwhile: not „sent“, says so, text stays", !f.querySelector(".feedback__form").hidden
+        && f.querySelector("[data-feedback-sent]").hidden && f.querySelector("[data-feedback-error]").textContent.includes("не е изпратена")
+        && f.querySelector("textarea[name=reason]").value === "Няма снимка");
 
     w = feedbackPage({ ok: true }); f = w.document;
     press(w, f.querySelector(".feedback__ask button[value=yes]"));

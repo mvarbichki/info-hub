@@ -219,6 +219,32 @@ class PasswordSheetTests(InfoHubTestCase):
     def sheet(self, response):
         return dict(re.findall(r'<td class="code">([a-z_0-9]+)</td>\s*<td class="code">([a-z0-9-]+)</td>', self.html(response)))
 
+    def token(self):
+        """The one-time token of the „Нови пароли“ buttons, as the Обекти page gives it."""
+        return re.search(r'name="sheet_token" value="([^"]+)"', self.html(self.boss.get("/manage/venues/"))).group(1)
+
+    def renew(self, url, **kwargs):
+        return self.boss.post(url, {"sheet_token": self.token()}, **kwargs)
+
+    def test_sent_again_changes_nothing(self):
+        """F5 on the sheet (or Back + „Confirm resubmission“) sends the form again: the printed sheet keeps working."""
+        token = self.token()
+        url = f"/manage/venues/{self.pernik.pk}/passwords/"
+        first = self.sheet(self.boss.post(url, {"sheet_token": token}))
+        again = self.boss.post(url, {"sheet_token": token}, follow=True)
+        self.assertContains(again, "Нищо не е сменено")
+        self.assertEqual(self.sheet(again), {})
+        self.assertTrue(User.objects.get(username="pernik_staff").check_password(first["pernik_staff"]))
+
+    def test_without_token_or_from_an_older_page(self):
+        old = self.token()
+        self.token()  # the page opened again (another tab): the older page's buttons are stale
+        for data in ({}, {"sheet_token": old}, {"sheet_token": ""}):
+            response = self.boss.post("/manage/venues/passwords/", data, follow=True)
+            self.assertContains(response, "Нищо не е сменено")
+        self.assertTrue(User.objects.get(username="pernik_staff").check_password(PASSWORD))
+        self.assertIn("pernik_staff", self.sheet(self.renew("/manage/venues/passwords/")))  # the page's own button works
+
     def test_generated_passwords(self):
         pattern = re.compile(rf"[{PASSWORD_ALPHABET}]{{4}}-[{PASSWORD_ALPHABET}]{{4}}-[{PASSWORD_ALPHABET}]{{4}}")
         passwords = {new_password() for _ in range(50)}
@@ -230,7 +256,7 @@ class PasswordSheetTests(InfoHubTestCase):
     def test_one_venue(self):
         pc = Client()
         pc.post("/login/", {"username": "pernik_staff", "password": PASSWORD})
-        response = self.boss.post(f"/manage/venues/{self.pernik.pk}/passwords/")
+        response = self.renew(f"/manage/venues/{self.pernik.pk}/passwords/")
         found = self.sheet(response)
         self.assertEqual(set(found), {"pernik_staff", "pernik_manager"})
         self.assertIn("no-store", response["Cache-Control"])
@@ -245,18 +271,18 @@ class PasswordSheetTests(InfoHubTestCase):
 
     def test_all_working_venues_without_training_and_stopped(self):
         Venue.objects.filter(pk=self.sah.pk).update(is_active=False)
-        response = self.boss.post("/manage/venues/passwords/")
+        response = self.renew("/manage/venues/passwords/")
         self.assertEqual(set(self.sheet(response)), {"pernik_staff", "pernik_manager"})
         self.assertTrue(User.objects.get(pk=self.training_staff.pk).check_password(PASSWORD))
         self.assertTrue(User.objects.get(username="mladost_staff").check_password(PASSWORD))
 
     def test_a_page_per_venue(self):
-        response = self.boss.post("/manage/venues/passwords/")
+        response = self.renew("/manage/venues/passwords/")
         self.assertEqual(self.html(response).count('<section class="sheet">'), 2)
 
     def test_nothing_to_renew(self):
         empty = Venue.objects.create(name="Празен")
-        self.assertContains(self.boss.post(f"/manage/venues/{empty.pk}/passwords/", follow=True), "Няма потребители")
+        self.assertContains(self.renew(f"/manage/venues/{empty.pk}/passwords/", follow=True), "Няма потребители")
         self.assertRedirects(self.boss.get("/manage/venues/passwords/"), "/login/", fetch_redirect_response=False)  # button-only: no empty 405
 
 

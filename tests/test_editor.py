@@ -75,6 +75,13 @@ class UploadTests(InfoHubTestCase):
         self.assertEqual(status, 200)
         self.assertEqual(Image.objects.get(pk=data["item"]["id"]).collection_id, department_collection(self.cms).pk)
 
+    def test_upload_with_an_odd_place_lands_in_your_own(self):
+        cms = self.client_for(self.cms_editor)
+        for place in ("abc", "1.5", "-1", ""):
+            status, data = self.upload(cms, png(), "image", place=place)
+            self.assertEqual(status, 200, place)  # was a server error for "abc" / "1.5"
+            self.assertEqual(Image.objects.get(pk=data["item"]["id"]).collection_id, department_collection(self.cms).pk)
+
     def test_upload_needs_post(self):
         self.assertRedirects(self.editor.get("/manage/upload/"), "/login/", fetch_redirect_response=False)  # button-only: no empty 405
 

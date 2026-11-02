@@ -42,6 +42,7 @@ document.addEventListener("click", function (event) {
     var error = form.querySelector("[data-feedback-error]");
     var MIN_LENGTH = 5;  // stats.views.REASON_MIN_LENGTH
     var NEEDED = error.textContent;
+    var LOGGED_OUT = "Бележката не е изпратена: компютърът вече не е влязъл в сайта. Копирайте текста, презаредете страницата, влезте и я изпратете пак.";
 
     function show(asking) {
         ask.hidden = asking;
@@ -85,6 +86,8 @@ document.addEventListener("click", function (event) {
             return;
         }
         fetch(form.action, { method: "POST", body: data, headers: headers }).then(function (response) {
+            // Logged out meanwhile (e.g. new passwords): the answer ended on the login page, not stored.
+            if (response.redirected) return fail(LOGGED_OUT);
             if (response.ok) return done(true);
             return response.json().then(function (answer) { fail(answer.error); });
         }).catch(function () {

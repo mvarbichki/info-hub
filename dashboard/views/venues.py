@@ -1,5 +1,7 @@
 """Venues (superuser only): only the places; their accounts are in users.py."""
 
+import secrets
+
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.cache import add_never_cache_headers
@@ -16,9 +18,15 @@ from ..forms import VenueForm
 from .common import head_context, superuser_required
 
 
+SHEET_TOKEN = "password-sheet-token"
+
+
 @superuser_required
 def venues(request):
     """The venues with their accounts; a form to add one."""
+    # The „Нови пароли“ buttons carry a one-time token: the sheet page sent again (F5, or Back and
+    # „Confirm resubmission“) must not make new passwords once more, or the printed sheet stops working.
+    request.session[SHEET_TOKEN] = secrets.token_urlsafe(16)
     form = VenueForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         venue = Venue.objects.create(name=form.cleaned_data["name"])
@@ -33,7 +41,7 @@ def venues(request):
     for venue in items:
         venue.only_here = len(posts_only_for(venue))
         venue.account_list = list(venue.accounts.all())
-    context.update({"form": form, "venues": items})
+    context.update({"form": form, "venues": items, "sheet_token": request.session[SHEET_TOKEN]})
     return TemplateResponse(request, "dashboard/venues.html", context)
 
 
@@ -78,6 +86,11 @@ def remove_venue(request, pk):
 def password_sheet(request, pk=None):
     """New passwords for one venue (pk) or for every working venue (not the training one), shown
     once as a sheet to print. The passwords are stored only as hashes, so they can't be shown again."""
+    token = request.POST.get("sheet_token", "")
+    if not token or token != request.session.pop(SHEET_TOKEN, None):
+        messages.error(request, "Нищо не е сменено: бутонът „Нови пароли“ от тази страница вече е използван (или страницата "
+                                "е стара), паролите остават същите. Ако ви трябват нови, натиснете бутона отново тук.")
+        return redirect("dashboard:venues")
     if pk is None:
         venues = Venue.objects.filter(is_active=True, is_training=False)
     else:

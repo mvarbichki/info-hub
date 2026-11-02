@@ -230,7 +230,8 @@ def upload(request):
     uploaded = request.FILES.get("file")
     if uploaded is None:
         return JsonResponse({"error": "Няма избран файл."}, status=400)
-    place = Page.objects.filter(pk=request.POST.get("place") or 0).first()
+    place_id = request.POST.get("place", "")
+    place = Page.objects.filter(pk=place_id).first() if place_id.isdigit() else None
     department = DepartmentPage.objects.ancestor_of(place, inclusive=True).first() if place else None
     if department is None or not can_manage(request.user, department):
         department = departments_for(request.user).first()
