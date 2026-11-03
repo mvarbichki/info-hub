@@ -689,19 +689,28 @@
     function offerCopy() {
         var copy = readCopy();
         if (!copy || !AUTOSAVE.key) return;
-        var usable = copy.base === AUTOSAVE.base && Date.now() - copy.at < MAX_AGE && copy.blocks;
-        if (!usable) { dropCopy(); return; }  // too old, or the post was saved since
+        if (!(Date.now() - copy.at < MAX_AGE && copy.blocks)) { dropCopy(); return; }  // too old
         if (form.querySelector(".flash--error[role=alert]") || same(copy, snapshot())) return;  // the page has this text already
+        // Saved by somebody (or in another tab) after the copy was made: still offered, with a warning,
+        // and a restored copy keeps its own starting version, so „Публикувай“ first shows the usual
+        // „changed meanwhile“ message instead of replacing the newer version unseen.
+        var newer = copy.base !== AUTOSAVE.base;
         var when = new Date(copy.at);
         var time = ("0" + when.getHours()).slice(-2) + ":" + ("0" + when.getMinutes()).slice(-2);
         var day = when.toDateString() === new Date().toDateString() ? "днес" : when.getDate() + "." + (when.getMonth() + 1) + ".";
         var restoreButton = h("button", { type: "button", class: "button-primary button-small", text: "Възстанови" });
         var dropButton = h("button", { type: "button", class: "button-secondary button-small", text: "Не, изтрий го" });
         var note = h("div", { class: "flash flash--warning autosave", "data-autosave": "" }, [
-            h("p", { text: "Има незапазен текст на тази публикация от " + day + " в " + time + " (напр. браузърът се е затворил или записът не е стигнал до сървъра). Да го възстановя ли?" }),
+            h("p", { text: "Има незапазен текст на тази публикация от " + day + " в " + time + " (напр. браузърът се е затворил или записът не е стигнал до сървъра). Да го възстановя ли?"
+                + (newer ? " Внимание: публикацията е запазвана след това – при запазване ще видите какво е променено." : "") }),
             h("div", { class: "autosave__buttons" }, [restoreButton, dropButton]),
         ]);
-        restoreButton.addEventListener("click", function () { restore(copy); note.remove(); });
+        restoreButton.addEventListener("click", function () {
+            restore(copy);
+            var base = form.querySelector("input[name=base_revision]");
+            if (newer && base) base.value = copy.base;
+            note.remove();
+        });
         dropButton.addEventListener("click", function () { dropCopy(); note.remove(); });
         form.insertBefore(note, form.firstChild);
         note.scrollIntoView({ block: "center" });

@@ -468,9 +468,6 @@ function fileEvent(w, type, files, prop) {
     const old = JSON.parse(kept[key]); old.at -= 21 * 3600 * 1000;
     ({ w, d } = load("new.html", { storage: { [key]: JSON.stringify(old) } }));
     check("autosave: a copy older than 20 h is dropped", !d.querySelector("[data-autosave]") && !w.localStorage.getItem(key));
-    const other = JSON.parse(kept[key]); other.base = "999";
-    ({ w, d } = load("new.html", { storage: { [key]: JSON.stringify(other) } }));
-    check("autosave: a copy from before a later save is dropped", !d.querySelector("[data-autosave]") && !w.localStorage.getItem(key));
 
     // another post has its own copy; the same text as on the page: nothing to offer
     ({ w, d } = load("edit.html"));
@@ -481,6 +478,19 @@ function fileEvent(w, type, files, prop) {
     const sameCopy = storageOf(w);
     ({ w, d } = load("edit.html", { storage: Object.assign({}, sameCopy, kept) }));
     check("autosave: nothing offered when the page already has that text", !d.querySelector("[data-autosave]"));
+
+    // saved by somebody else after the copy was made: offered with a warning; restoring keeps the
+    // copy's starting version, so the server's „changed meanwhile“ check stops the first save
+    const later = JSON.parse(sameCopy[editKey]);
+    later.values.title = "Моята незапазена промяна"; later.base = "1";
+    ({ w, d } = load("edit.html", { storage: { [editKey]: JSON.stringify(later) } }));
+    const warn = d.querySelector("[data-autosave]");
+    const baseField = d.querySelector("input[name=base_revision]");
+    const pageBase = baseField && baseField.value;
+    check("autosave: newer version saved since → offered with a warning", warn && warn.textContent.includes("публикацията е запазвана след това"), warn && warn.textContent);
+    [...warn.querySelectorAll("button")].find((b) => b.textContent === "Възстанови").click();
+    check("autosave: … restored, and the form says which version it began from", d.querySelector("input[name=title]").value === "Моята незапазена промяна"
+        && baseField.value === "1" && pageBase !== "1", [pageBase, baseField.value]);
 }
 
 console.log(`\n${passed}/${passed + failed.length} passed`);

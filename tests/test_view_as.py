@@ -1,6 +1,7 @@
 """„Виж като обект“: an editor sees the site exactly as a venue account does, and nothing is recorded."""
 
 from django.contrib.auth.models import User
+from wagtail.images.models import Image
 
 from stats.models import Ack, GuideStat, SearchStat, Seen, Vote
 from venues.models import VenueAccount
@@ -33,7 +34,18 @@ class ViewAsVisibilityTests(test_audience.VisibilityTests):
             "training": viewing_as(self, self.training_staff),
         }
 
-    # Three of the inherited tests check things that, by design, a look never does:
+    # Four of the inherited tests check things that, by design, a look never does:
+
+    def test_files_follow_their_post(self):
+        """Files are served with the editor's rights during a look (audit 2026-11-03: the editor's own
+        Управление, e.g. the thumbnails in the post editor, broke for posts the venue doesn't see);
+        the venue's pages still link only its own files (test_the_same_pages_as_the_account_itself)."""
+        image = Image.objects.get(pk=self.pic_mgr["id"])
+        self.assertEqual(self.clients["pernik_staff"].get(image.file.url).status_code, 200)
+        page = self.html(self.clients["pernik_staff"].get(self.A.url))
+        self.assertNotIn(image.file.url.rsplit(".", 1)[0], page)
+        editor_page = self.html(self.clients["pernik_staff"].get(f"/manage/{self.C.pk}/"))
+        self.assertIn(f'"id": {image.pk}', editor_page)  # the editor's own page, with the picture
 
     def test_feedback_only_on_own_posts(self):
         """A vote is refused while looking (the real account's own vote is in VisibilityTests)."""
@@ -155,6 +167,18 @@ class ViewAsTests(InfoHubTestCase):
         self.assertIn("Като редактор виждате всички публикации", page)
         self.assertIn("Виж като обект…", page)
         self.assertEqual(client.post("/manage/view-as/end/", {"next": "https://evil.example/"})["Location"], "/")
+
+    def test_a_draft_preview_stays_the_editors(self):
+        """Audit 2026-11-03: Wagtail renders „Преглед“ through the middleware with the editor's session;
+        it must not turn into the venue's view (a draft no venue sees yet)."""
+        client = viewing_as(self, self.pernik_staff)
+        self.save_post(client, url=f"/manage/{self.post.pk}/", title="Инвентаризация – чернова", action="draft",
+                       all_venues=None, manager_venues=[self.pernik.pk], needs_ack="on")
+        preview = self.html(client.get(f"/manage/{self.post.pk}/preview/"))
+        self.assertIn("Инвентаризация – чернова", preview)
+        self.assertNotIn("manage-bar--view-as", preview)
+        self.assertIn("Преглед: така ще изглежда", preview)
+        self.assertIn("manage-bar--view-as", self.html(client.get("/")))  # the look itself goes on
 
     def test_only_editors(self):
         account = VenueAccount.objects.get(user=self.pernik_manager)
