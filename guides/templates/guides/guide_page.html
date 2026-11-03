@@ -51,7 +51,7 @@
         <form method="post" action="{% url 'guide_ack' page.pk %}" class="ack__form">
             {% csrf_token %}
             <span>Прочетохте ли публикацията{% if page.ack_briefs_team %} и запознахте ли екипа{% endif %}?</span>
-            <button type="submit" class="button-primary">{{ page.ack_label }}</button>
+            <button type="submit" class="button-primary"{% if view_as %} disabled title="Преглед като обект: не се изпраща"{% endif %}>{{ page.ack_label }}</button>
         </form>
         {% endif %}
     </section>
@@ -71,15 +71,15 @@
             {% csrf_token %}
             <div class="feedback__ask" {% if asking %}hidden{% endif %}>
                 <span class="feedback__question">Помогна ли ви тази публикация?</span>
-                <button type="submit" name="helpful" value="yes" class="button-secondary">Да</button>
-                <button type="submit" name="helpful" value="no" class="button-secondary" data-feedback-no>Не</button>
+                <button type="submit" name="helpful" value="yes" class="button-secondary"{% if view_as %} disabled title="Преглед като обект: не се изпраща"{% endif %}>Да</button>
+                <button type="submit" name="helpful" value="no" class="button-secondary" data-feedback-no{% if view_as %} disabled title="Преглед като обект: не се изпраща"{% endif %}>Не</button>
             </div>
             <div class="feedback__reason" {% if not asking %}hidden{% endif %}>
                 <label for="feedback-reason" class="feedback__question">Какво липсваше или не беше ясно?</label>
                 <textarea id="feedback-reason" name="reason" rows="3" maxlength="500" placeholder="напр. Няма снимка на екрана с грешката"></textarea>
                 <p class="field-error" data-feedback-error {% if not asking %}hidden{% endif %}>Напишете накратко какво липсваше или не беше ясно – без това отговорът „Не“ не се изпраща.</p>
                 <div class="feedback__actions">
-                    <button type="submit" name="helpful" value="no" class="button-primary">Изпрати</button>
+                    <button type="submit" name="helpful" value="no" class="button-primary"{% if view_as %} disabled title="Преглед като обект: не се изпраща"{% endif %}>Изпрати</button>
                     <a href="{{ page.url }}#feedback" data-feedback-cancel>Отказ</a>
                 </div>
                 {% include "guides/includes/help_contact.html" %}

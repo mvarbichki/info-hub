@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Виж като обект{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs"><a href="{% url 'dashboard:index' %}">Управление</a><span aria-hidden="true">›</span><span>Виж като обект</span></nav>
+
+<section class="panel">
+    <h1 class="panel__title">Виж като обект</h1>
+    <p>Сайтът ще ви се показва точно както го вижда избраният потребител: само публикациите за него, какво е „Ново“ за него и дали обектът е потвърдил „Прочетох“.</p>
+    <p class="muted">Докато гледате, нищо не се записва: прочитанията, „Нови за вас“ и статистиката на обекта не се променят, а бутоните „Да“, „Не“ и „Прочетох“ не работят. Управлението остава ваше.</p>
+    {% if current %}<p>Сега гледате като: <b>{{ current.view_label }}</b>.</p>{% endif %}
+    <form method="post" class="view-as-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <label for="view-as-account">Обект и потребител</label>
+        <select id="view-as-account" name="account" required>
+            <option value="">– изберете –</option>
+            {% for venue, accounts in venues %}
+            <optgroup label="{{ venue.name }}{% if not venue.is_active %} (спрян){% endif %}">
+                {% for account in accounts %}
+                <option value="{{ account.pk }}"{% if current.pk == account.pk %} selected{% endif %}>{{ venue.name }} – {% if account.role == "manager" %}управител{% else %}служители{% endif %} ({{ account.user.username }})</option>
+                {% endfor %}
+            </optgroup>
+            {% endfor %}
+        </select>
+        {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
+        <div class="form-actions">
+            <button type="submit" class="button-primary">Покажи сайта</button>
+            <a href="{{ next }}">Отказ</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

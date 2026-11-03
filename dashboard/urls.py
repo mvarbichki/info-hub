@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from .views import accounts, categories, departments, history, posts, stats, users, venues
+from .views import accounts, categories, departments, history, posts, stats, users, venues, viewas
 
 app_name = "dashboard"
 
@@ -37,6 +37,8 @@ urlpatterns = [
     path("users/<int:pk>/reset-password/", users.reset_password, name="reset_password"),
     path("users/<int:pk>/toggle/", users.toggle_user, name="toggle_user"),
     path("users/<int:pk>/delete/", users.delete_user, name="delete_user"),
+    path("view-as/", viewas.view_as, name="view_as"),
+    path("view-as/end/", viewas.end_view_as, name="end_view_as"),
     path("password/", accounts.PasswordChange.as_view(), name="password"),
     # The login moved to /login/ (one login for venues and departments).
     path("login/", RedirectView.as_view(pattern_name="login", query_string=True)),

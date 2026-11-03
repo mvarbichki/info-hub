@@ -291,6 +291,14 @@ h1, h2, h3 { line-height: 1.25; }
 .manage-bar__switch a:hover { background: rgba(255, 255, 255, .5); }
 .manage-bar__switch a[aria-current] { background: var(--brand); color: #fff; }
 .manage-bar__note { font-size: 14px; }
+.manage-bar--view-as { background: #b42a2a; color: #fff; }
+.manage-bar.manage-bar--view-as a, .manage-bar.manage-bar--view-as .link-button { color: #fff; }
+.manage-bar.manage-bar--view-as .manage-bar__switch { background: rgba(255, 255, 255, .18); }
+.manage-bar.manage-bar--view-as .manage-bar__switch a[aria-current] { background: #fff; color: #b42a2a; }
+/* „Виж като обект“: the venue's buttons are shown, but only to look at */
+.ack button[disabled], .feedback button[disabled] { opacity: .5; cursor: not-allowed; }
+.view-as-form label { display: block; font-weight: 600; }
+.view-as-form select { display: block; width: 100%; max-width: 520px; margin: 6px 0 4px; font: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
 .manage-bar__links { margin-left: auto; }
 /* Управление's own header: light, no site menu or search (the site keeps the plum header) */
 .manage-header { background: var(--surface); border-bottom: 1px solid var(--border); }

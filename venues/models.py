@@ -44,3 +44,8 @@ class VenueAccount(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ({self.venue}, {self.get_role_display()})"
+
+    @property
+    def view_label(self):
+        """„Обект Север – управител (sever_manager)“, for „Виж като обект“."""
+        return f"{self.venue} – {'управител' if self.role == MANAGER else 'служители'} ({self.user.username})"

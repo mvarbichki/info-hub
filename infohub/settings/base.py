@@ -61,6 +61,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Nothing on the site is visible without logging in (each venue has its own accounts).
     "infohub.access.LoginRequired",
+    # „Виж като обект“: an editor sees the site pages as a chosen venue account (venues/viewas.py).
+    "venues.viewas.ViewAsMiddleware",
     "infohub.access.NoIndexMiddleware",
     "infohub.access.PageMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

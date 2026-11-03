@@ -21,11 +21,13 @@ def is_prefetch(request):
 
 
 def counted_reader(request):
-    """The (venue, role) whose visit counts, else None (content managers, training, browser prefetches)."""
+    """The (venue, role) whose visit counts, else None (content managers, training, browser prefetches,
+    an editor's „Виж като обект“)."""
     from venues.access import reader
+    from venues.viewas import viewed_by
 
     me = reader(request.user)
-    if me is None or me.venue.is_training or is_prefetch(request):
+    if me is None or viewed_by(request.user) or me.venue.is_training or is_prefetch(request):
         return None
     return me
 

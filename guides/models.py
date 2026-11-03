@@ -252,6 +252,7 @@ class GuidePage(Page):
         from stats.reading import mark_seen
         from stats.tracking import count_view, counted_reader, is_prefetch
         from venues.access import is_reader
+        from venues.viewas import viewed_by
 
         from .audience import can_see
 
@@ -260,7 +261,7 @@ class GuidePage(Page):
         if not can_see(request.user, self):
             raise Http404
         response = super().serve(request, *args, **kwargs)
-        if request.method == "GET" and is_reader(request.user) and not is_prefetch(request):
+        if request.method == "GET" and is_reader(request.user) and not is_prefetch(request) and not viewed_by(request.user):
             mark_seen(self, request.user)  # no longer „Ново“ for this account, also on the training PCs
             me = counted_reader(request)
             if me:
