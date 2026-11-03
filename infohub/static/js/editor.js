@@ -63,7 +63,7 @@
         return node;
     }
 
-    function changed() { dirty = true; }
+    function changed() { dirty = true; scheduleAutosave(); }
 
     function formatMb(bytes) {
         if (bytes < MB) return Math.max(1, Math.round(bytes / 1024)) + " KB";  // not „0.0 MB“ for a small PDF
@@ -624,6 +624,89 @@
     // A file dropped anywhere else must not replace the page (and lose the work).
     window.addEventListener("dragover", function (e) { if (hasFiles(e)) e.preventDefault(); });
     window.addEventListener("drop", function (e) { if (hasFiles(e)) e.preventDefault(); });
+
+    // --- autosave: a copy of the work in this browser, offered back after a crash or a lost save ---
+    // The server clears it once a save really went through (data-autosave-saved, see infohub.js).
+
+    var AUTOSAVE = config.autosave || {};
+    var STORE = "infohub-autosave:" + AUTOSAVE.key;
+    var MAX_AGE = 20 * 3600 * 1000;  // uploads not saved in a post are deleted by the nightly cleanup after 24 h
+    var SKIP = ["csrfmiddlewaretoken", "body", "action", "base_revision"];
+    var autosaveTimer = null;
+
+    function snapshot() {
+        var values = {}, checks = [];
+        Array.prototype.forEach.call(form.elements, function (el) {
+            if (!el.name || SKIP.indexOf(el.name) >= 0 || el.type === "file" || el.type === "submit") return;
+            if (el.type === "checkbox" || el.type === "radio") {
+                if (el.checked && !el.disabled) checks.push(el.name + "=" + el.value);  // what the form would send
+            } else {
+                values[el.name] = el.value;
+            }
+        });
+        return { values: values, checks: checks, blocks: blocks().map(function (block) { return block.serialize(); }) };
+    }
+    function same(a, b) {
+        return JSON.stringify([a.values, a.checks, a.blocks]) === JSON.stringify([b.values, b.checks, b.blocks]);
+    }
+    function readCopy() {
+        try { return JSON.parse(window.localStorage.getItem(STORE) || "null"); } catch (e) { return null; }
+    }
+    function dropCopy() {
+        try { window.localStorage.removeItem(STORE); } catch (e) { /* storage off: nothing kept */ }
+    }
+    function writeCopy() {
+        autosaveTimer = null;
+        if (!AUTOSAVE.key) return;
+        var copy = snapshot();
+        copy.at = Date.now();
+        copy.base = AUTOSAVE.base;
+        try { window.localStorage.setItem(STORE, JSON.stringify(copy)); } catch (e) { /* full or off */ }
+    }
+    function scheduleAutosave() {
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(writeCopy, 1000);
+    }
+    function restore(copy) {
+        Array.prototype.forEach.call(form.elements, function (el) {
+            if (!el.name || SKIP.indexOf(el.name) >= 0 || el.type === "file" || el.type === "submit") return;
+            if (el.type === "checkbox" || el.type === "radio") {
+                el.disabled = false;
+                delete el.dataset.implied;
+                el.checked = copy.checks.indexOf(el.name + "=" + el.value) >= 0;
+            } else if (Object.prototype.hasOwnProperty.call(copy.values, el.name)) {
+                el.value = copy.values[el.name];
+            }
+        });
+        var tick = form.querySelector("[data-audience] input[type=checkbox]");
+        if (tick) tick.dispatchEvent(new Event("change", { bubbles: true }));  // the picker (audience.js) redraws itself
+        blocks().forEach(function (block) { block.node.remove(); });
+        activeBlock = null;
+        copy.blocks.forEach(function (data) { if (BUILDERS[data.type]) createBlock(data.type, data); });
+        refresh();
+        changed();
+    }
+    function offerCopy() {
+        var copy = readCopy();
+        if (!copy || !AUTOSAVE.key) return;
+        var usable = copy.base === AUTOSAVE.base && Date.now() - copy.at < MAX_AGE && copy.blocks;
+        if (!usable) { dropCopy(); return; }  // too old, or the post was saved since
+        if (form.querySelector(".flash--error[role=alert]") || same(copy, snapshot())) return;  // the page has this text already
+        var when = new Date(copy.at);
+        var time = ("0" + when.getHours()).slice(-2) + ":" + ("0" + when.getMinutes()).slice(-2);
+        var day = when.toDateString() === new Date().toDateString() ? "днес" : when.getDate() + "." + (when.getMonth() + 1) + ".";
+        var restoreButton = h("button", { type: "button", class: "button-primary button-small", text: "Възстанови" });
+        var dropButton = h("button", { type: "button", class: "button-secondary button-small", text: "Не, изтрий го" });
+        var note = h("div", { class: "flash flash--warning autosave", "data-autosave": "" }, [
+            h("p", { text: "Има незапазен текст на тази публикация от " + day + " в " + time + " (напр. браузърът се е затворил или записът не е стигнал до сървъра). Да го възстановя ли?" }),
+            h("div", { class: "autosave__buttons" }, [restoreButton, dropButton]),
+        ]);
+        restoreButton.addEventListener("click", function () { restore(copy); note.remove(); });
+        dropButton.addEventListener("click", function () { dropCopy(); note.remove(); });
+        form.insertBefore(note, form.firstChild);
+        note.scrollIntoView({ block: "center" });
+    }
+    offerCopy();
 
     form.addEventListener("input", changed);
     form.addEventListener("change", changed);

@@ -1,7 +1,6 @@
 <div class="dash-head">
     <h1>Управление</h1>
     <div class="dash-head__links">
-        {% if request.user.is_superuser %}<a href="/admin/">Разширени настройки</a>{% endif %}
         <a href="{% url 'dashboard:password' %}">Смени парола</a>
     </div>
 </div>
@@ -13,5 +12,6 @@
     <a href="{% url 'dashboard:departments' %}"{% if active == "departments" %} aria-current="page"{% endif %}>Раздели</a>
     <a href="{% url 'dashboard:venues' %}"{% if active == "venues" %} aria-current="page"{% endif %}>Обекти</a>
     <a href="{% url 'dashboard:users' %}"{% if active == "users" %} aria-current="page"{% endif %}>Потребители</a>
+    <a href="{% url 'dashboard:settings' %}"{% if active == "settings" %} aria-current="page"{% endif %}>Настройки</a>
     {% endif %}
 </nav>

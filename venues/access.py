@@ -14,7 +14,7 @@ from guides.slugs import TRANSLIT
 
 from .models import MANAGER, STAFF, Venue, VenueAccount
 
-# A group without permissions for every venue account, so their rights show in /admin/ → Groups.
+# A group without permissions for every venue account, so they are easy to tell apart in the database.
 VENUE_GROUP = "Обекти – само преглед"
 TRAINING_NAME = "Обучение"
 # New login names: Latin lower case, digits, _ . - (logins are not case-sensitive anyway).

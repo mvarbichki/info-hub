@@ -29,7 +29,7 @@ def client_ip(request):
 
 @method_decorator(login_not_required, name="dispatch")  # dispatch is overridden below
 class Login(LoginView):
-    """The one login page of the site (also for /admin/). Venue accounts land on the site,
+    """The one login page of the site. Venue accounts land on the site,
     departments in /manage/.
 
     Somebody logged in is sent on, unless a page they can't open sent them here ("next"): then the
@@ -85,7 +85,7 @@ class Login(LoginView):
 
 @method_decorator(login_not_required, name="dispatch")
 class Logout(LogoutView):
-    """Used for /manage/logout/, the manage bar and the Wagtail admin's log out: back to the login page.
+    """Used for /manage/logout/ and the editors' bar: back to the login page.
 
     Open to everybody: a double click on „Изход“ sends a second logout after the first one, and that
     must not land on the login page with "next=/manage/logout/" (after the next login the browser

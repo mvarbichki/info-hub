@@ -118,6 +118,13 @@ def _changed_meanwhile(request, page):
     )
 
 
+AUTOSAVE_SAVED = "infohub_autosave_saved"
+
+
+def _autosave_key(request, page):
+    return f"{request.user.pk}:{page.pk if page else 'new'}"
+
+
 @editor_required
 def edit(request, pk=None):
     """The post editor: a new post (no pk) or an existing one; ?revision=<id> fills it with an older
@@ -157,6 +164,8 @@ def edit(request, pk=None):
             except InactiveLimitReached as error:
                 form.add_error("place", str(error))
             else:
+                # the browser's autosaved copy (editor.js) is not needed any more: infohub.js drops it
+                request.session[AUTOSAVE_SAVED] = _autosave_key(request, page)
                 if saved.is_draft or saved.has_unpublished_changes and saved.live:
                     messages.success(request, format_html(
                         "Черновата на „{}“ е запазена. Обектите {}. <a href=\"{}\" target=\"_blank\">Преглед ↗</a>",
@@ -209,6 +218,8 @@ def edit(request, pk=None):
             "uploadUrl": reverse("dashboard:upload"),
             "limits": settings.INFOHUB_LIMITS_MB,
             "fileTypes": file_extensions(),
+            # autosave in the browser: per user and post, valid only on the version it began from
+            "autosave": {"key": _autosave_key(request, page), "base": str(base_revision or "")},
         },
     })
 

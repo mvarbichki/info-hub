@@ -49,6 +49,13 @@ h1, h2, h3 { line-height: 1.25; }
 .container { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 .muted { color: var(--muted); }
 
+/* Keyboard use: a skip link to the content, and a clear outline on whatever has the focus */
+.skip-link { position: absolute; left: 16px; top: -100px; z-index: 1000; padding: 10px 16px; border-radius: 0 0 8px 8px; background: var(--brand); color: #fff; font-weight: 600; }
+.skip-link:focus { top: 0; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.site-header :focus-visible, .site-nav :focus-visible, .manage-bar--view-as :focus-visible, .skip-link:focus-visible { outline-color: var(--accent); }
+#main:focus { outline: none; }
+
 /* Header */
 .site-header { background: var(--brand); color: #fff; }
 .site-header__inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap; }
@@ -324,6 +331,8 @@ h1, h2, h3 { line-height: 1.25; }
 .flash { padding: 12px 16px; border-radius: 10px; border-left: 5px solid; }
 .flash--success { background: #e5f4ec; border-color: #1d7a46; }
 .flash--warning { background: #fdf3e1; border-color: #d97706; }
+.autosave p { margin: 0 0 10px; }
+.autosave__buttons { display: flex; gap: 10px; flex-wrap: wrap; }
 .flash--error { background: #fbe9e9; border-color: #b42a2a; }
 
 .field-error { color: #b42a2a; margin: 6px 0 0; font-weight: 600; }
@@ -412,6 +421,9 @@ a.button-secondary { display: inline-block; text-decoration: none; padding: 7px 
 .storage table { margin-top: 12px; }
 .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--dept); margin-right: 8px; vertical-align: middle; }
 .field--span { grid-column: 1 / -1; }
+.logo-preview { display: inline-flex; align-items: center; min-height: 72px; margin-top: 6px; padding: 10px 16px; border-radius: 8px; background: var(--brand); }
+.logo-preview img { height: 56px; width: auto; }
+.logo-preview .muted { color: rgba(255, 255, 255, .75); }
 .field input[type=text] { font-weight: 400; }
 .inactive-counts { margin: 0 0 12px; font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .inactive-count b { color: var(--text); }

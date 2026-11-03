@@ -43,7 +43,7 @@ def clean_html(html):
     cleaned = _converter().to_database_format(html.replace("&nbsp;", " ").replace(" ", " "))
     if not BeautifulSoup(cleaned, "html.parser").get_text().strip():
         return ""
-    # Wagtail's own editor uses <b>/<i>, so the posts can still be opened in /admin/.
+    # Wagtail's rich text stores <b>/<i>.
     return cleaned.replace("<strong>", "<b>").replace("</strong>", "</b>").replace("<em>", "<i>").replace("</em>", "</i>")
 
 

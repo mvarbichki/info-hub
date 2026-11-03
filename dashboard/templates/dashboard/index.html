@@ -19,12 +19,12 @@
     <div class="panel__head">
         <form method="get" class="list-filter">
             {% if departments|length > 1 %}
-            <select name="department" onchange="this.form.submit()" aria-label="Раздел">
+            <select name="department" data-autosubmit aria-label="Раздел">
                 <option value="">Всички раздели</option>
                 {% for d in departments %}<option value="{{ d.pk }}" {% if department_id == d.pk|stringformat:"d" %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
             </select>
             {% endif %}
-            <select name="status" onchange="this.form.submit()" aria-label="Статус">
+            <select name="status" data-autosubmit aria-label="Статус">
                 <option value="">Всички</option>
                 <option value="active" {% if status == "active" %}selected{% endif %}>Само на сайта</option>
                 <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Само архивирани</option>

@@ -126,6 +126,23 @@ function press(w, button) {
     d.defaultView.dispatchEvent(new d.defaultView.Event("pageshow"));
     check("back on the page: the form works again", !once.hasAttribute("data-sending") && submitOnce(once) === false && asked === 2);
 
+    // No inline handlers (Content-Security-Policy): the print button and the filters that send their form.
+    {
+        let printed = 0, sentForms = 0;
+        const d = load(true, 1280, (html) => html.replace("</body>",
+            '<form id="f"><select name="days" data-autosubmit><option>7</option><option>30</option></select></form></body>'));
+        const w = d.defaultView;
+        w.print = () => { printed++; };
+        w.HTMLFormElement.prototype.submit = function () { sentForms++; };
+        const print = d.querySelector("[data-print]");
+        check("print button has no onclick, only data-print", print && !print.hasAttribute("onclick"));
+        print.click();
+        check("print button prints", printed === 1, printed);
+        const select = d.querySelector("[data-autosubmit]");
+        select.value = "30";
+        select.dispatchEvent(new w.Event("change", { bubbles: true }));
+        check("a filter sends its form when changed", sentForms === 1, sentForms);
+    }
     console.log(failed.length ? `${failed.length} FAILED of ${passed + failed.length}` : `${passed}/${passed} passed`);
 process.exit(failed.length ? 1 : 0);
 })();

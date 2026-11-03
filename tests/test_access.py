@@ -94,8 +94,6 @@ class LoginTests(InfoHubTestCase):
         response = editor.post("/manage/logout/", follow=True)
         self.assertTrue(response.redirect_chain[-1][0].startswith("/login/"))
         self.assertContains(response, "Излязохте успешно")
-        response = self.client_for(self.admin).post("/admin/logout/")
-        self.assertTrue(response["Location"].startswith("/login/"))
 
     def test_a_double_logout_and_the_next_login(self):
         """VM 2026-10-31: „Изход“ sent twice; the second logout came from someone already logged out
@@ -156,7 +154,7 @@ class VenueAccountLimitsTests(InfoHubTestCase):
             response = staff.get(url)
             self.assertEqual(response.status_code, 302, url)
             self.assertTrue(response["Location"].startswith("/login/?next="), url)
-        self.assertIn(staff.get("/admin/").status_code, (302, 403))
+        self.assertEqual(staff.get("/admin/").status_code, 404)
         self.assertEqual(staff.post("/manage/upload/", {"kind": "image"}).status_code, 302)
 
     def test_venue_accounts_cannot_change_or_reset_their_password(self):

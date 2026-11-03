@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from .views import accounts, categories, departments, history, posts, stats, users, venues, viewas
+from .views import accounts, categories, departments, history, posts, site_settings, stats, users, venues, viewas
 
 app_name = "dashboard"
 
@@ -37,6 +37,7 @@ urlpatterns = [
     path("users/<int:pk>/reset-password/", users.reset_password, name="reset_password"),
     path("users/<int:pk>/toggle/", users.toggle_user, name="toggle_user"),
     path("users/<int:pk>/delete/", users.delete_user, name="delete_user"),
+    path("settings/", site_settings.site_settings, name="settings"),
     path("view-as/", viewas.view_as, name="view_as"),
     path("view-as/end/", viewas.end_view_as, name="end_view_as"),
     path("password/", accounts.PasswordChange.as_view(), name="password"),

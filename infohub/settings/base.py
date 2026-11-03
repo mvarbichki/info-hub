@@ -14,6 +14,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 
+from django.utils.csp import CSP
+
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 BASE_DIR = PROJECT_DIR.parent
 
@@ -36,7 +38,7 @@ INSTALLED_APPS = [
     "wagtail.contrib.redirects",
     "wagtail.embeds",
     "wagtail.sites",
-    "dashboard.apps.InfoHubUsersConfig",  # wagtail.users with optional name/e-mail
+    "wagtail.users",
     "wagtail.snippets",
     "wagtail.documents",
     "wagtail.images",
@@ -64,11 +66,28 @@ MIDDLEWARE = [
     # „Виж като обект“: an editor sees the site pages as a chosen venue account (venues/viewas.py).
     "venues.viewas.ViewAsMiddleware",
     "infohub.access.NoIndexMiddleware",
+    "infohub.access.SecurityPolicyMiddleware",
     "infohub.access.PageMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "wagtail.contrib.redirects.middleware.RedirectMiddleware",
 ]
+
+# Content-Security-Policy (infohub.access.SecurityPolicyMiddleware, HTML pages only): scripts only
+# from the site's own files (no inline scripts or onclick); styles also inline (Quill, colours);
+# pictures/videos also from the browser itself (pasted screenshots); PDFs in an iframe of the site.
+SECURE_CSP = {
+    "default-src": [CSP.SELF],
+    "script-src": [CSP.SELF],
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE],
+    "img-src": [CSP.SELF, "data:", "blob:"],
+    "media-src": [CSP.SELF, "blob:"],
+    "frame-src": [CSP.SELF],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.SELF],
+}
 
 ROOT_URLCONF = "infohub.urls"
 
@@ -263,14 +282,6 @@ WAGTAILSEARCH_BACKENDS = {
 # Base URL to use when referring to full URLs within the Wagtail admin backend -
 # e.g. in notification emails. Don't include '/admin' or a trailing slash
 WAGTAILADMIN_BASE_URL = os.environ.get("WAGTAILADMIN_BASE_URL", "http://localhost:8000")
-
-# The Bulgarian translation of the Wagtail admin is incomplete, so new users
-# get the English admin by default (see home/signals.py). Each user can switch
-# under Account -> Preferences.
-WAGTAILADMIN_PERMITTED_LANGUAGES = [
-    ("en", "English"),
-    ("bg", "Български"),
-]
 
 # Allowed file extensions for documents in the document library.
 # This can be omitted to allow all files, but note that this may present a security risk

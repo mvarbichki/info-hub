@@ -267,3 +267,27 @@ class VenueForm(forms.Form):
         if same_name(others, "name", name):
             raise forms.ValidationError("Вече има обект с това име.")
         return name
+
+
+class SiteSettingsForm(forms.Form):
+    """Настройки (superuser): the site's name, logo and footer (home.SiteBranding)."""
+
+    site_name = forms.CharField(label="Име на сайта", max_length=100)
+    logo = forms.ImageField(
+        label="Ново лого", required=False,
+        help_text="PNG или JPG, светло лого на прозрачен фон (горната лента е тъмнолилава), височина поне 120 px.",
+    )
+    remove_logo = forms.BooleanField(label="Без лого", required=False)
+    footer_text = forms.CharField(
+        label="Текст в долната част", max_length=255, required=False,
+        help_text="Напр. „Не намирате отговор? Обадете се на ИТ: вътр. 123“.",
+    )
+
+    def clean_logo(self):
+        from django.conf import settings
+
+        logo = self.cleaned_data.get("logo")
+        limit = settings.INFOHUB_LIMITS_MB["image"]
+        if logo and logo.size > limit * 1024 * 1024:
+            raise forms.ValidationError(f"Файлът е по-голям от {limit} MB.")
+        return logo

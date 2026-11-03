@@ -63,7 +63,7 @@ def _grant_permissions(department, group, collection):
         for codename in codenames:
             permission = Permission.objects.get(content_type__app_label=app_label, codename=codename)
             GroupCollectionPermission.objects.get_or_create(group=group, collection=collection, permission=permission)
-    # The Wagtail admin („Разширени настройки“) is for the superuser only.
+    # No Wagtail admin for the department groups (it is closed for everybody since 2026-11-03).
     group.permissions.remove(Permission.objects.get(content_type__app_label="wagtailadmin", codename="access_admin"))
 
 

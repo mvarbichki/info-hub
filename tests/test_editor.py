@@ -3,6 +3,7 @@
 import io
 import json
 import os
+import re
 from datetime import timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -688,3 +689,40 @@ class ConflictTests(InfoHubTestCase):
         response, _ = self.save_post(self.mk, url=self.url, title="След архив", base_revision=old)
         self.assertEqual(response.status_code, 302)
 
+
+
+class AutosaveTests(InfoHubTestCase):
+    """The editor keeps a copy of the work in the browser (editor.js); the server gives it a key per
+    user and post and says when a save went through, so the copy can go (infohub.js)."""
+
+    def setUp(self):
+        super().setUp()
+        self.editor = self.client_for(self.marketing_editor)
+
+    def saved_key(self, response):
+        match = re.search(r'data-autosave-saved="([^"]*)"', self.html(response))
+        return match.group(1) if match else None
+
+    def test_keys_and_versions(self):
+        me = self.marketing_editor.pk
+        self.assertEqual(self.editor_config(self.editor.get("/manage/new/"))["autosave"], {"key": f"{me}:new", "base": ""})
+        _, post = self.save_post(self.editor, title="Първа")
+        config = self.editor_config(self.editor.get(f"/manage/{post.pk}/"))
+        self.assertEqual(config["autosave"], {"key": f"{me}:{post.pk}", "base": str(post.latest_revision_id)})
+        other = self.editor_config(self.client_for(self.admin).get(f"/manage/{post.pk}/"))
+        self.assertNotEqual(other["autosave"]["key"], config["autosave"]["key"])  # another person, another copy
+
+    def test_a_real_save_clears_the_copy_once(self):
+        me = self.marketing_editor.pk
+        response = self.editor.post("/manage/new/", self.post_data(title="Нова"), follow=True)
+        self.assertEqual(self.saved_key(response), f"{me}:new")
+        self.assertIsNone(self.saved_key(self.editor.get("/manage/")))  # only on the next page
+        post = GuidePage.objects.get(title="Нова")
+        response = self.editor.post(f"/manage/{post.pk}/", self.post_data(title="Нова", action="draft"), follow=True)
+        self.assertEqual(self.saved_key(response), f"{me}:{post.pk}")
+
+    def test_no_clearing_when_nothing_was_saved(self):
+        response = self.editor.post("/manage/new/", self.post_data(title=""))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(self.saved_key(response))
+        self.assertIsNone(self.saved_key(self.editor.get("/manage/")))

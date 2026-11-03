@@ -22,7 +22,7 @@ ROLE_LABELS = dict(ROLE_CHOICES)
 
 
 def _managed_user(request, pk):
-    """Any account except superusers (managed in /admin/) and yourself."""
+    """Any account except superusers (`manage.py createsuperuser` / `changepassword`; their own password: Смени парола) and yourself."""
     user = get_object_or_404(get_user_model().objects.select_related("venue_account__venue"), pk=pk)
     if user.is_superuser or user == request.user:
         raise Http404

@@ -12,7 +12,7 @@ are quoted below where they help find things on screen.
 | **Venue staff** (`<place>_staff`) | the site only | Read the posts for all venues and for their venue. Read-only, 1-year session, cannot change their password. |
 | **Venue manager** (`<place>_manager`) | the site only | The same, plus posts only for venue managers. |
 | **Editor** (one or more per section) | `/manage/` | Write, edit, archive and delete the posts of their own section, manage its categories, see its statistics. |
-| **Superuser** | `/manage/` + `/admin/` | Everything: all sections, „Важно“ (pinned posts), sections, venues, users; `/admin/` only for the logo, site name and footer. |
+| **Superuser** | `/manage/` | Everything: all sections, „Важно“ (pinned posts), sections, venues, users, Настройки (logo, site name, footer). |
 
 Venues and their accounts are managed in `/manage/` → Обекти / Потребители (several accounts per
 venue and role are possible). An editor's section is the group „<Раздел> – редактори“ with page
@@ -69,8 +69,8 @@ video, note (info / tip / warning) and file. In the code a section is a *departm
 
 ## Logo, site name and footer
 
-`/admin/` → **Settings → Лого и име на сайта**. Until a logo is uploaded, the header shows a
-dashed placeholder.
+`/manage/` → **Настройки** (superuser). Until a logo is uploaded, the header shows a dashed
+placeholder. Wagtail's own admin (`/admin/`) is closed since 2026-11-03: everything is in `/manage/`.
 
 ## Adding a section
 
@@ -86,7 +86,10 @@ Both create the section page, a media folder for its pictures and videos (linked
 `guides.DepartmentMedia`, so renaming is safe) and the group „Финанси – редактори“.
 Colours: blue, green, purple, orange, red, teal. Icons: computer, people, megaphone, info, tools, book.
 
-## Admin language
+## Security policy
 
-The Bulgarian translation of the Wagtail admin is incomplete, so new accounts get `/admin/` in
-English (each user can switch under Account → Preferences). The site and `/manage/` are Bulgarian.
+Every HTML page sends a Content-Security-Policy (Django's own, `SECURE_CSP` in `base.py`, through
+`infohub.access.SecurityPolicyMiddleware`): scripts only from the site's own files. So no inline
+`<script>` and no `onclick="…"` in templates: use a `data-` attribute and a handler in
+`infohub/static/js/` (as `data-print`, `data-autosubmit`). JSON for scripts goes in `json_script`.
+`tests/test_security_policy.py` fails on any inline handler or script.

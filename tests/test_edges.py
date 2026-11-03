@@ -146,13 +146,6 @@ class SectionsTests(InfoHubTestCase):
         self.assertEqual(self.save_post(self.client_for(self.marketing_editor), title="Второ")[0].status_code, 302)
 
 
-class AdminFormsTests(InfoHubTestCase):
-    def test_wagtail_user_edit_and_account_without_names(self):
-        boss = self.client_for(self.admin)
-        self.assertEqual(boss.get(f"/admin/users/edit/{self.marketing_editor.pk}/").status_code, 200)
-        self.assertEqual(boss.get("/admin/account/").status_code, 200)
-
-
 class SummaryTests(InfoHubTestCase):
     def test_many_venues_are_counted_not_listed(self):
         venues = [Venue.objects.create(name=f"Обект {i}") for i in range(6)]
@@ -186,3 +179,17 @@ class ModelAndReportEdgeTests(InfoHubTestCase):
         for query, day, results in rows:
             SearchStat.objects.create(query=query, venue=self.pernik, role="staff", day=day, count=1, results=results)
         self.assertEqual([e["query"] for e in failed_searches(venue=self.pernik)], ["ьъюящ"])
+
+
+class KeyboardTests(InfoHubTestCase):
+    def test_skip_link_to_the_content_on_every_kind_of_page(self):
+        """2026-11-03: „Към съдържанието“ first on the page, for keyboard and screen-reader users."""
+        pages = [(Client(), "/login/"), (self.client_for(self.pernik_staff), "/"), (self.client_for(self.pernik_staff), "/marketing/"),
+                 (self.client_for(self.marketing_editor), "/manage/"), (self.client_for(self.marketing_editor), "/manage/new/")]
+        for client, url in pages:
+            with self.subTest(url=url):
+                html = self.html(client.get(url))
+                body = html.split("<body", 1)[1]
+                first_link = body.split("<a ", 1)[1]
+                self.assertTrue(first_link.startswith('class="skip-link" href="#main"'), first_link[:60])
+                self.assertIn('<main class="container site-main" id="main" tabindex="-1">', html)

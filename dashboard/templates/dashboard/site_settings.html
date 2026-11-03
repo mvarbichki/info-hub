@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load wagtailimages_tags %}
+
+{% block title %}Настройки – Управление{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block content %}
+{% include "dashboard/_head.html" with active="settings" %}
+{% include "dashboard/_messages.html" %}
+
+<section class="panel">
+    <h2>Име, лого и долен текст на сайта</h2>
+    <p class="muted">Виждат се на всяка страница на сайта и на страницата за вход.</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-grid">
+            <label class="field field--span">{{ form.site_name.label }}<input type="text" name="site_name" value="{{ form.site_name.value|default:'' }}" maxlength="100" required></label>
+            <div class="field field--span">
+                <span>Лого сега</span>
+                <div class="logo-preview">{% if branding.logo %}{% image branding.logo height-112 alt="Текущото лого" %}{% else %}<span class="muted">няма лого</span>{% endif %}</div>
+            </div>
+            <label class="field field--span">{{ form.logo.label }} <span class="muted small">{{ form.logo.help_text }}</span><input type="file" name="logo" accept="image/png,image/jpeg"></label>
+            {% if branding.logo %}<label class="checkbox field--span"><input type="checkbox" name="remove_logo"{% if form.remove_logo.value %} checked{% endif %}> {{ form.remove_logo.label }}</label>{% endif %}
+            <label class="field field--span">{{ form.footer_text.label }} <span class="muted small">{{ form.footer_text.help_text }}</span><input type="text" name="footer_text" value="{{ form.footer_text.value|default:'' }}" maxlength="255"></label>
+        </div>
+        {% for field in form %}{% for error in field.errors %}<p class="field-error">{{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+        <button type="submit" class="button-primary">Запази</button>
+    </form>
+</section>
+{% endblock %}

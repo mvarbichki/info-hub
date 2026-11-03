@@ -436,15 +436,12 @@ class PanelExtrasTests(InfoHubTestCase):
         self.assertTrue(created)
         self.assertEqual(sorted(a.user.username for a in venue.accounts.select_related("user")), ["manager", "training_staff"])
 
-    def test_admin_user_forms_need_no_name_or_email(self):
+    def test_the_wagtail_admin_is_closed(self):
+        """2026-11-03: everything is in /manage/ (Настройки took the logo, name and footer)."""
         boss = self.client_for(self.admin)
-        response = boss.post("/admin/users/new/", {
-            "username": "itnew", "email": "", "first_name": "", "last_name": "",
-            "password1": "Some-Strong-Pass-26", "password2": "Some-Strong-Pass-26", "is_active": "on",
-        })
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(User.objects.filter(username="itnew").exists())
-        self.assertEqual(boss.get("/admin/").status_code, 200)
+        for url in ("/admin/", "/admin/pages/", "/admin/users/", "/admin/settings/home/sitebranding/", "/admin/login/"):
+            self.assertEqual(boss.get(url).status_code, 404, url)
+        self.assertTrue(Client().get("/admin/")["Location"].startswith("/login/"))
 
     def test_add_department_command_refuses_reserved_addresses(self):
         from django.core.management import CommandError, call_command

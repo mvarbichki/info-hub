@@ -21,7 +21,8 @@
         {% block extra_css %}{% endblock %}
     </head>
 
-    <body class="{% block body_class %}{% endblock %}">
+    <body class="{% block body_class %}{% endblock %}"{% if manage_bar.autosave_saved %} data-autosave-saved="{{ manage_bar.autosave_saved }}"{% endif %}>
+        <a class="skip-link" href="#main">Към съдържанието</a>
         {% if manage_bar %}
         {# Editors: the same bar on the site and in Управление; its tabs show where they are. Red while „Виж като обект“ is on. #}
         <div class="manage-bar{% if view_as %} manage-bar--view-as{% endif %}">
@@ -95,7 +96,7 @@
         </header>
         {% endif %}
 
-        <main class="container site-main">
+        <main class="container site-main" id="main" tabindex="-1">
             {% block content %}{% endblock %}
         </main>
 

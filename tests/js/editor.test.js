@@ -15,10 +15,22 @@ function check(name, ok, detail) {
     else { failed.push(name); console.log("FAIL " + name + (detail !== undefined ? "  -> " + JSON.stringify(detail) : "")); }
 }
 
-function load(file) {
-    const html = fs.readFileSync(path.join(PAGES, file), "utf8").replace(/<script src=[^>]*><\/script>/g, "");
+const siteSrc = fs.readFileSync(path.join(STATIC, "js/infohub.js"), "utf8");
+
+// storage: localStorage entries to start with (a reload); savedKey: the page says a save went through.
+function load(file, { storage = {}, savedKey = "" } = {}) {
+    let html = fs.readFileSync(path.join(PAGES, file), "utf8").replace(/<script src=[^>]*><\/script>/g, "");
+    if (savedKey) html = html.replace(/<body([^>]*)>/, `<body$1 data-autosave-saved="${savedKey}">`);
     const dom = new JSDOM(html, { runScripts: "outside-only", pretendToBeVisual: true, url: "http://testserver/manage/" });
     const w = dom.window;
+    Object.entries(storage).forEach(([k, v]) => w.localStorage.setItem(k, v));
+    // the autosave's 1 s timer runs when the test says so (flushAutosave)
+    const realTimeout = w.setTimeout.bind(w), realClear = w.clearTimeout.bind(w);
+    w.autosaveTimers = [];
+    w.setTimeout = (fn, ms) => (ms === 1000 ? -w.autosaveTimers.push(fn) : realTimeout(fn, ms));
+    w.clearTimeout = (id) => (id < 0 ? (w.autosaveTimers[-id - 1] = null) : realClear(id));
+    w.flushAutosave = () => { const t = w.autosaveTimers; w.autosaveTimers = []; t.forEach((fn) => fn && fn()); };
+    if (savedKey) w.eval(siteSrc);
     w.Element.prototype.scrollIntoView = function () {};
     w.document.getSelection = w.document.getSelection || (() => w.getSelection());
     const sent = [];
@@ -398,6 +410,77 @@ function fileEvent(w, type, files, prop) {
     form.dispatchEvent(ev2);
     check("draft: then „Публикувай“ replaces the choice (one field)", form.querySelectorAll("input[name=action][type=hidden]").length === 1
         && form.querySelector("input[type=hidden][name=action]").value === "publish");
+}
+
+// ---------- autosave in the browser ----------
+{
+    const rowOf = (d, name) => [...d.querySelectorAll("[data-venue-row]")].find((r) => r.textContent.includes(name));
+    const staffOf = (d, name) => rowOf(d, name).querySelector("[data-staff]");
+    const managerOf = (d, name) => rowOf(d, name).querySelector("[data-manager]");
+    const summaryOf = (d) => d.querySelector("[data-audience-summary]").textContent;
+    const storageOf = (w) => Object.fromEntries(Object.keys(w.localStorage).map((k) => [k, w.localStorage.getItem(k)]));
+    const input = (w, el, value) => { el.value = value; el.dispatchEvent(new w.Event("input", { bubbles: true })); };
+    const configOf = (d) => JSON.parse(d.getElementById("editor-config").textContent);
+    let { w, d } = load("new.html");
+    const key = configOf(d).autosave && "infohub-autosave:" + configOf(d).autosave.key;
+    check("autosave: the page has a key per user and post", key && /^infohub-autosave:\d+:new$/.test(key), key);
+    check("autosave: nothing offered on a fresh page", !d.querySelector("[data-autosave]"));
+    input(w, d.querySelector("input[name=title]"), "Касата не се отваря");
+    d.querySelector("[data-add=heading]").click();
+    input(w, d.querySelector(".eblock input[type=text]"), "Първо");
+    const allBox = d.querySelector("[data-all-venues]");
+    allBox.checked = false; allBox.dispatchEvent(new w.Event("change", { bubbles: true }));
+    const staff = staffOf(d, "Перник"); staff.checked = true; staff.dispatchEvent(new w.Event("change", { bubbles: true }));
+    check("autosave: nothing written before the pause", !w.localStorage.getItem(key));
+    w.flushAutosave();
+    const copy = JSON.parse(w.localStorage.getItem(key) || "null");
+    check("autosave: a copy after a pause in typing", copy && copy.values.title === "Касата не се отваря"
+        && copy.blocks.length === 1 && copy.blocks[0].text === "Първо", copy);
+    check("autosave: only what the form would send (no implied manager tick)", copy && copy.checks.includes("kind=guide")
+        && copy.checks.includes("staff_venues=" + staff.value) && !copy.checks.some((c) => c.startsWith("manager_venues")), copy && copy.checks);
+    const kept = storageOf(w);
+
+    // the browser closed: the same page again
+    ({ w, d } = load("new.html", { storage: kept }));
+    const note = d.querySelector("[data-autosave]");
+    check("autosave: offered after a reload", note && /Има незапазен текст.*днес в \d\d:\d\d/.test(note.textContent), note && note.textContent);
+    check("autosave: the page itself unchanged until asked", d.querySelector("input[name=title]").value === "" && blocksOf(d).length === 0);
+    [...note.querySelectorAll("button")].find((b) => b.textContent === "Възстанови").click();
+    check("autosave: „Възстанови“ brings title and blocks back", d.querySelector("input[name=title]").value === "Касата не се отваря"
+        && labels(d).join() === "Подзаглавие" && blocksOf(d)[0].querySelector("input[type=text]").value === "Първо", labels(d));
+    check("autosave: … and the venue choice, picker redrawn", !d.querySelector("[data-all-venues]").checked
+        && staffOf(d, "Перник").checked && managerOf(d, "Перник").checked && managerOf(d, "Перник").disabled
+        && summaryOf(d).indexOf("Перник") >= 0, summaryOf(d));
+    check("autosave: the note goes away", !d.querySelector("[data-autosave]"));
+    const sent = submit(w, d);
+    check("autosave: the restored post is sent as usual", !sent.prevented && sent.body.length === 1 && sent.body[0].text === "Първо", sent);
+
+    // „Не, изтрий го“
+    ({ w, d } = load("new.html", { storage: kept }));
+    [...d.querySelectorAll("[data-autosave] button")].find((b) => b.textContent === "Не, изтрий го").click();
+    check("autosave: „Не, изтрий го“ drops the copy", !w.localStorage.getItem(key) && !d.querySelector("[data-autosave]"));
+
+    // a save went through: the next page says so and the copy goes
+    ({ w, d } = load("new.html", { storage: kept, savedKey: key.replace("infohub-autosave:", "") }));
+    check("autosave: dropped after a real save", !w.localStorage.getItem(key) && !d.querySelector("[data-autosave]"));
+
+    // too old (uploads not in a post are deleted after 24 h) or from another version of the post
+    const old = JSON.parse(kept[key]); old.at -= 21 * 3600 * 1000;
+    ({ w, d } = load("new.html", { storage: { [key]: JSON.stringify(old) } }));
+    check("autosave: a copy older than 20 h is dropped", !d.querySelector("[data-autosave]") && !w.localStorage.getItem(key));
+    const other = JSON.parse(kept[key]); other.base = "999";
+    ({ w, d } = load("new.html", { storage: { [key]: JSON.stringify(other) } }));
+    check("autosave: a copy from before a later save is dropped", !d.querySelector("[data-autosave]") && !w.localStorage.getItem(key));
+
+    // another post has its own copy; the same text as on the page: nothing to offer
+    ({ w, d } = load("edit.html"));
+    const editKey = "infohub-autosave:" + configOf(d).autosave.key;
+    check("autosave: each post has its own key", editKey !== key && /:\d+$/.test(editKey), editKey);
+    input(w, d.querySelector("input[name=title]"), d.querySelector("input[name=title]").value);
+    w.flushAutosave();
+    const sameCopy = storageOf(w);
+    ({ w, d } = load("edit.html", { storage: Object.assign({}, sameCopy, kept) }));
+    check("autosave: nothing offered when the page already has that text", !d.querySelector("[data-autosave]"));
 }
 
 console.log(`\n${passed}/${passed + failed.length} passed`);

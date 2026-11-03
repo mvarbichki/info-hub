@@ -1,3 +1,20 @@
+// A post was just saved on the server: its autosaved copy in this browser (editor.js) is not needed.
+(function () {
+    var saved = document.body && document.body.dataset.autosaveSaved;
+    if (!saved) return;
+    try { window.localStorage.removeItem("infohub-autosave:" + saved); } catch (e) { /* storage off */ }
+})();
+
+// No inline scripts or onclick="…" anywhere (the Content-Security-Policy allows only these files):
+// a filter that sends its form when changed, and the print buttons.
+document.addEventListener("change", function (event) {
+    var select = event.target.closest && event.target.closest("[data-autosubmit]");
+    if (select && select.form) select.form.submit();
+});
+document.addEventListener("click", function (event) {
+    if (event.target.closest && event.target.closest("[data-print]")) window.print();
+});
+
 // Click a screenshot to view it full size; click again or press Esc to close.
 document.addEventListener("click", function (event) {
     var link = event.target.closest("a.zoomable");

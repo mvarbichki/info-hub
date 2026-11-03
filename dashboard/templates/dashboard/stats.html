@@ -12,17 +12,17 @@
     <div class="panel__head">
         <h2>Какво търсят обектите{% if venue %}: {{ venue.name }}{% endif %}</h2>
         <form method="get" class="list-filter">
-            <select name="days" onchange="this.form.submit()" aria-label="Период">
+            <select name="days" data-autosubmit aria-label="Период">
                 {% for d in periods %}<option value="{{ d }}" {% if d == days %}selected{% endif %}>Последните {{ d }} дни</option>{% endfor %}
             </select>
             {% if venues %}
-            <select name="venue" onchange="this.form.submit()" aria-label="Обект">
+            <select name="venue" data-autosubmit aria-label="Обект">
                 <option value="">Всички обекти</option>
                 {% for v in venues %}<option value="{{ v.pk }}" {% if venue_id == v.pk|stringformat:"d" %}selected{% endif %}>{{ v.name }}</option>{% endfor %}
             </select>
             {% endif %}
             {% if departments|length > 1 %}
-            <select name="department" onchange="this.form.submit()" aria-label="Раздел">
+            <select name="department" data-autosubmit aria-label="Раздел">
                 <option value="">Всички раздели</option>
                 {% for d in departments %}<option value="{{ d.pk }}" {% if department_id == d.pk|stringformat:"d" %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
             </select>

@@ -337,7 +337,7 @@ The full cPanel guide comes later; the database part is ready (tested on MariaDB
 `export_site` writes everything (venues, all accounts with their password hashes, departments,
 categories, posts with their versions, statistics, „Прочетох“) into one file; `import_site`
 replaces the whole database of a new installation with it. Not moved: logins (everybody logs in
-once more), the search index (rebuilt by `import_site`), the editing history of `/admin/`.
+once more), the search index (rebuilt by `import_site`).
 Copy the `media/` folder too. Works between SQLite, PostgreSQL and MariaDB (tested 2026-10-23
 SQLite → MariaDB: 24 venues, 48 venue accounts, 11 posts, every venue account sees exactly its
 posts and files, the same passwords log in).

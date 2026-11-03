@@ -96,7 +96,7 @@
     {% endif %}
 
     <footer class="guide__footer">
-        <button type="button" class="button-secondary" onclick="window.print()">Печат</button>
+        <button type="button" class="button-secondary" data-print>Печат</button>
         {% with department=page.department %}{% if department %}<a href="{% pageurl department %}">← Всички публикации на {{ department.title }}</a>{% endif %}{% endwith %}
     </footer>
 </article>

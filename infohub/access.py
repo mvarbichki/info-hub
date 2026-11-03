@@ -17,6 +17,7 @@ from django.contrib.auth.decorators import login_not_required
 from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.contrib.auth.views import redirect_to_login
 from django.http import Http404, HttpResponse, HttpResponseNotModified, StreamingHttpResponse
+from django.middleware.csp import ContentSecurityPolicyMiddleware
 from django.shortcuts import redirect, render, resolve_url
 from django.urls import reverse
 from django.utils._os import safe_join
@@ -30,7 +31,7 @@ CHUNK = 64 * 1024
 INLINE_TYPES = ("image/", "video/", "audio/", "application/pdf")
 # The post editor (also with ?place=…): its form posts to the page itself.
 EDITOR_PAGE = re.compile(r"^/manage/(new|\d+)/(\?|$)")
-LOGOUT_PAGE = re.compile(r"^/(manage|admin)/logout/")
+LOGOUT_PAGE = re.compile(r"^/manage/logout/")
 
 
 def _form_page(request):
@@ -54,6 +55,17 @@ class LoginRequired(LoginRequiredMiddleware):
             return super().handle_no_permission(request, view_func)
         page = _form_page(request) or request.get_full_path()
         return redirect_to_login(page, resolve_url(self.get_login_url(view_func)), self.get_redirect_field_name(view_func))
+
+
+class SecurityPolicyMiddleware(ContentSecurityPolicyMiddleware):
+    """Django's Content-Security-Policy (settings.SECURE_CSP), on HTML pages: the browser then runs
+    only the site's own script files, so a script slipped into a post or a name can't run.
+    Files (pictures, videos, a PDF shown in the page) are left alone."""
+
+    def process_response(self, request, response):
+        if not response.get("Content-Type", "").startswith("text/html"):
+            return response
+        return super().process_response(request, response)
 
 
 class PageMiddleware:

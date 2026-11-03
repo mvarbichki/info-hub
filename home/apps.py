@@ -6,4 +6,4 @@ class HomeConfig(AppConfig):
     name = "home"
 
     def ready(self):
-        from . import checks, signals  # noqa: F401
+        from . import checks  # noqa: F401

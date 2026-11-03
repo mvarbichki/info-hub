@@ -54,14 +54,14 @@
     <h2>Потребители ({{ accounts|length }}{% if filtered %}, филтрирани{% endif %})</h2>
     <div class="panel__head">
         <form method="get" class="list-filter">
-            <select name="role" onchange="this.form.submit()" aria-label="Роля">
+            <select name="role" data-autosubmit aria-label="Роля">
                 <option value="">Всички роли</option>
                 <option value="admin" {% if role_filter == "admin" %}selected{% endif %}>Администратор</option>
                 <option value="editor" {% if role_filter == "editor" %}selected{% endif %}>Редактори</option>
                 <option value="staff" {% if role_filter == "staff" %}selected{% endif %}>Служители на обект</option>
                 <option value="manager" {% if role_filter == "manager" %}selected{% endif %}>Управители на обект</option>
             </select>
-            <select name="venue" onchange="this.form.submit()" aria-label="Обект">
+            <select name="venue" data-autosubmit aria-label="Обект">
                 <option value="">Всички обекти</option>
                 {% for v in venues %}<option value="{{ v.pk }}" {% if venue_filter == v.pk|stringformat:"d" %}selected{% endif %}>{{ v.name }}</option>{% endfor %}
             </select>

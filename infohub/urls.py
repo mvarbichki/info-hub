@@ -1,13 +1,10 @@
 from django.conf import settings
 from django.urls import include, path, re_path
-from django.contrib.auth.decorators import login_not_required
-from django.views.generic import RedirectView
 
-from wagtail.admin import urls as wagtailadmin_urls
 from wagtail import urls as wagtail_urls
 from wagtail.documents import urls as wagtaildocs_urls
 
-from dashboard.views.accounts import Login, Logout
+from dashboard.views.accounts import Login
 from infohub.access import robots_txt, serve_media
 from search import views as search_views
 from stats import views as stats_views
@@ -17,11 +14,7 @@ urlpatterns = [
     path("robots.txt", robots_txt),
     # Uploaded pictures, videos and files: only for logged-in users (also on the server).
     re_path(r"^media/(?P<path>.+)$", serve_media, name="media"),
-    # Logging out of the Wagtail admin also lands on the site's login (before the admin's own URL).
-    path("admin/logout/", Logout.as_view()),
-    # One login page for everything, also for the Wagtail admin.
-    path("admin/login/", login_not_required(RedirectView.as_view(pattern_name="login", query_string=True))),
-    path("admin/", include(wagtailadmin_urls)),
+    # No Wagtail admin (/admin/, closed 2026-11-03): everything is in /manage/, so /admin/... is a 404.
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
     path("feedback/<int:pk>/", stats_views.feedback, name="guide_feedback"),
