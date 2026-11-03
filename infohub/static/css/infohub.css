@@ -268,7 +268,7 @@ h1, h2, h3 { line-height: 1.25; }
 }
 
 @media print {
-    .site-header, .site-footer, .guide__footer, .toc, .breadcrumbs, .feedback, .ack, .ack-hint, .pdf-view { display: none; }
+    .site-header, .manage-header, .site-footer, .guide__footer, .toc, .breadcrumbs, .feedback, .ack, .ack-hint, .pdf-view { display: none; }
     body, .guide { background: #fff; box-shadow: none; }
     .step { break-inside: avoid; }
 }
@@ -283,9 +283,20 @@ h1, h2, h3 { line-height: 1.25; }
 
 /* Management panel (/manage/) */
 
-/* "Manage mode" bar on the public site for logged-in content managers */
+/* Editors' bar on top of the site and of Управление: tabs „Сайт | Управление“ show where they are */
 .manage-bar { background: var(--accent); color: var(--brand); font-size: 15px; }
-.manage-bar__inner { display: flex; justify-content: space-between; align-items: center; gap: 8px 20px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; }
+.manage-bar__inner { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; padding-top: 6px; padding-bottom: 6px; }
+.manage-bar__switch { display: flex; gap: 2px; padding: 3px; background: rgba(58, 23, 72, .12); border-radius: 999px; }
+.manage-bar__switch a { padding: 5px 16px; border-radius: 999px; text-decoration: none; }
+.manage-bar__switch a:hover { background: rgba(255, 255, 255, .5); }
+.manage-bar__switch a[aria-current] { background: var(--brand); color: #fff; }
+.manage-bar__note { font-size: 14px; }
+.manage-bar__links { margin-left: auto; }
+/* Управление's own header: light, no site menu or search (the site keeps the plum header) */
+.manage-header { background: var(--surface); border-bottom: 1px solid var(--border); }
+.manage-header__inner { display: flex; align-items: center; gap: 12px; padding-top: 14px; padding-bottom: 14px; }
+.manage-header__name { font-size: 19px; font-weight: 700; color: var(--brand); text-decoration: none; }
+.manage-header__tag { padding: 3px 12px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-dark); font-size: 14px; font-weight: 600; }
 .manage-bar__links { display: flex; gap: 8px 20px; align-items: center; flex-wrap: wrap; }
 .manage-bar a, .manage-bar .link-button { color: var(--brand); font-weight: 600; }
 .manage-bar form { margin: 0; }
@@ -368,7 +379,6 @@ h1, h2, h3 { line-height: 1.25; }
 
 .small { font-size: 14px; }
 .flash--info { background: var(--primary-soft); border-color: var(--primary); }
-.dash-head__sub { margin: 4px 0 0; color: var(--muted); }
 .dash-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 20px; border-bottom: 2px solid var(--border); }
 .dash-tabs a { padding: 10px 16px; margin-bottom: -2px; border-bottom: 3px solid transparent; font-weight: 600; color: var(--muted); text-decoration: none; }
 .dash-tabs a:hover { color: var(--primary); }

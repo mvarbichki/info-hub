@@ -23,19 +23,38 @@
 
     <body class="{% block body_class %}{% endblock %}">
         {% if manage_bar %}
+        {# Editors: the same bar on the site and in Управление; its tabs show where they are. #}
         <div class="manage-bar">
             <div class="container manage-bar__inner">
-                <span>Режим управление · <b>{{ manage_bar.title }}</b></span>
-                <nav class="manage-bar__links" aria-label="Управление">
+                <nav class="manage-bar__switch" aria-label="Сайт или управление">
+                    <a href="/"{% if manage_bar.area == "site" %} aria-current="true"{% endif %}>Сайт</a>
+                    <a href="{% url 'dashboard:index' %}"{% if manage_bar.area == "manage" %} aria-current="true"{% endif %}>Управление</a>
+                </nav>
+                {% if manage_bar.area == "site" %}
+                <span class="manage-bar__note">Като редактор виждате всички публикации. Обектите виждат само своите.</span>
+                {% else %}
+                <span class="manage-bar__note">Вие управлявате: <b>{{ manage_bar.title }}</b></span>
+                {% endif %}
+                <div class="manage-bar__links">
+                    {% if manage_bar.area == "site" %}
                     {% if page and page.pk in manage_bar.place_ids %}<a href="{% url 'dashboard:new' %}?place={{ page.pk }}">+ Добави публикация тук</a>{% endif %}
                     {% if audience_summary %}<span class="manage-bar__audience">Вижда се от: <b>{{ audience_summary }}</b></span>{% endif %}
                     {% if can_edit %}<a href="{% url 'dashboard:update' page.pk %}">Редактирай тази публикация</a>{% endif %}
-                    <a href="{% url 'dashboard:index' %}">Към управлението</a>
+                    {% endif %}
                     <form method="post" action="{% url 'dashboard:logout' %}">{% csrf_token %}<button type="submit" class="link-button">Изход ({{ request.user.username }})</button></form>
-                </nav>
+                </div>
             </div>
         </div>
         {% endif %}
+        {% if manage_bar.area == "manage" %}
+        {# Управление has its own light header: no site menu or search, so it never looks like the venues' site. #}
+        <header class="manage-header">
+            <div class="container manage-header__inner">
+                <a class="manage-header__name" href="{% url 'dashboard:index' %}">{{ branding.site_name }}</a>
+                <span class="manage-header__tag">Управление</span>
+            </div>
+        </header>
+        {% else %}
         <header class="site-header">
             <div class="container site-header__inner">
                 <a class="brand" href="/">
@@ -66,6 +85,7 @@
             </nav>
             {% endblock %}
         </header>
+        {% endif %}
 
         <main class="container site-main">
             {% block content %}{% endblock %}

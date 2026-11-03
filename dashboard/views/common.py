@@ -57,8 +57,4 @@ def managed_page(request, model, pk):
 
 
 def head_context(request):
-    departments = list(departments_for(request.user))
-    return {
-        "departments": departments,
-        "managed_title": "" if request.user.is_superuser else ", ".join(d.title for d in departments),
-    }
+    return {"departments": list(departments_for(request.user))}

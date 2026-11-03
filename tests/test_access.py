@@ -123,6 +123,31 @@ class LoginTests(InfoHubTestCase):
         self.assertEqual(response.redirect_chain[-1], ("/", 302))
         self.assertContains(response, "Изход (pernik_manager)")
 
+    def test_editors_always_see_whether_they_are_on_the_site_or_in_management(self):
+        """User 2026-11-03: the site and Управление looked alike. Editors get the tabs „Сайт | Управление“
+        on both; Управление has its own light header without the site's menu and search."""
+        editor = self.client_for(self.marketing_editor)
+        site = editor.get("/marketing/")
+        self.assertContains(site, '<a href="/" aria-current="true">Сайт</a>', html=True)
+        self.assertContains(site, "Като редактор виждате всички публикации")
+        self.assertContains(site, "+ Добави публикация тук")
+        self.assertContains(site, 'class="site-header"')
+        self.assertNotContains(site, "manage-header")
+        for url in ("/manage/", "/manage/new/", "/manage/stats/"):
+            panel = editor.get(url)
+            self.assertContains(panel, '<a href="/manage/" aria-current="true">Управление</a>', html=True)
+            self.assertContains(panel, "Вие управлявате: <b>Маркетинг</b>")
+            self.assertContains(panel, 'class="manage-header"')
+            self.assertNotContains(panel, "site-nav")
+            self.assertNotContains(panel, 'role="search"')
+            self.assertNotContains(panel, "Като редактор")
+            self.assertContains(panel, "Изход (marketing)", count=1)
+        self.assertContains(self.client_for(self.admin).get("/manage/"), "Вие управлявате: <b>всички раздели</b>")
+        for user in (self.pernik_staff, self.pernik_manager):
+            home = self.client_for(user).get("/")
+            self.assertNotContains(home, "manage-bar")
+            self.assertNotContains(home, "manage-header")
+
 
 class VenueAccountLimitsTests(InfoHubTestCase):
     def test_venue_accounts_have_no_panel_and_no_admin(self):
