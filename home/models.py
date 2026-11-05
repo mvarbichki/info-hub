@@ -9,6 +9,8 @@ from wagtail.models import Page
 
 # „Нови за вас“ shows this many cards; the rest are counted.
 UNREAD_SHOWN = 12
+# A section card on the home page lists this many categories, then „Още N →“.
+CATEGORIES_SHOWN = 6
 
 
 class HomePage(Page):
@@ -29,7 +31,8 @@ class HomePage(Page):
         verbose_name = "Начална страница"
 
     def get_context(self, request, *args, **kwargs):
-        """Staff-first: what people search for and read most, then a light overview per department."""
+        """Staff-first: what people search for and read most, then a light overview per department
+        (its categories)."""
         from guides.audience import visible_guides
         from guides.models import DepartmentPage
         from stats.reading import confirms, unread
@@ -44,7 +47,11 @@ class HomePage(Page):
         for department in departments:
             in_department = guides.descendant_of(department)
             department.guide_count = in_department.count()
-            department.highlights = highlights(in_department)
+            # Its categories (with something this user may see); without any, its most read posts.
+            links = department.category_links(guides)
+            department.links = links[:CATEGORIES_SHOWN]
+            department.more_links = len(links) - len(department.links)
+            department.highlights = [] if links else highlights(in_department)
 
         context["departments"] = departments
         context["popular_searches"] = popular_for(request.user)

@@ -5,6 +5,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.views.decorators.http import require_POST
 
+from guides.departments import move_in_order
 from guides.models import CategoryPage, GuidePage
 from guides.publishing import set_visible
 from guides.slugs import unique_slug
@@ -52,6 +53,16 @@ def rename_category(request, pk):
         category.title = category.draft_title = form.cleaned_data["title"]
         category.save_revision(user=request.user, log_action=True).publish(user=request.user)
         messages.success(request, f"„{old_title}“ е преименувана на „{category.title}“.")
+    return redirect("dashboard:categories")
+
+
+@editor_required
+@require_POST
+def reorder_category(request, pk):
+    """↑ ↓: the order of the categories on the home page card and the department page."""
+    category = managed_page(request, CategoryPage, pk)
+    if request.POST.get("direction") in ("up", "down"):
+        move_in_order(category, request.POST["direction"], user=request.user)
     return redirect("dashboard:categories")
 
 

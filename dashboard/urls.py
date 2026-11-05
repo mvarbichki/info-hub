@@ -18,6 +18,7 @@ urlpatterns = [
     path("<int:pk>/delete/", posts.delete, name="delete"),
     path("categories/", categories.categories, name="categories"),
     path("categories/<int:pk>/rename/", categories.rename_category, name="rename_category"),
+    path("categories/<int:pk>/move/", categories.reorder_category, name="move_category"),
     path("categories/<int:pk>/publish/", categories.publish_category, name="publish_category"),
     path("categories/<int:pk>/delete/", categories.delete_category, name="delete_category"),
     path("stats/", stats.stats, name="stats"),

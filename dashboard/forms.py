@@ -70,6 +70,12 @@ class GuideForm(forms.Form):
     staff_venues = forms.ModelMultipleChoiceField(queryset=Venue.objects.all(), required=False, error_messages=GONE_VENUE)
     manager_venues = forms.ModelMultipleChoiceField(queryset=Venue.objects.all(), required=False, error_messages=GONE_VENUE)
     needs_ack = forms.BooleanField(label="Искай „Прочетох“ от управителите", required=False)
+    # „Важна промяна“ (guides/changes.py), offered only when editing a post published before.
+    important = forms.BooleanField(label="Важна промяна – покажи я отново на обектите", required=False)
+    change_note = forms.CharField(label="Какво е променено", max_length=200, required=False, error_messages={
+        "max_length": "„Какво е променено“ е до %(limit_value)d знака (сега %(show_value)d). Съкратете го.",
+    })
+    reconfirm = forms.BooleanField(label="Искай ново потвърждение „Прочетох“", required=False)
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
@@ -85,8 +91,15 @@ class GuideForm(forms.Form):
     def clean_summary(self):
         return " ".join(self.cleaned_data["summary"].split())
 
+    def clean_change_note(self):
+        return " ".join(self.cleaned_data["change_note"].split())
+
     def clean(self):
         data = super().clean()
+        if data.get("reconfirm"):
+            data["important"] = True  # a new confirmation is asked only together with an important change
+        if data.get("change_note") and not data.get("important"):
+            self.add_error("change_note", "Отметнете „Важна промяна“ или изтрийте текста в „Какво е променено“.")
         if data.get("is_pinned") and data.get("pinned_until") and data["pinned_until"] < timezone.localdate():
             self.add_error("pinned_until", "Тази дата е минала. Изберете бъдеща дата или оставете полето празно.")
         if not ("staff_venues" in self.errors or "manager_venues" in self.errors):
@@ -95,6 +108,11 @@ class GuideForm(forms.Form):
             except AudienceError as error:
                 self.add_error("all_venues", str(error))
         return data
+
+    def change(self):
+        """(note, reconfirm) for save_guide when the edit is marked important, else None."""
+        data = self.cleaned_data
+        return (data["change_note"], data["reconfirm"]) if data.get("important") else None
 
     def parent_page(self):
         from wagtail.models import Page

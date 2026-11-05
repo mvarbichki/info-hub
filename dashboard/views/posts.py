@@ -17,6 +17,7 @@ from wagtail.documents.models import Document
 from wagtail.images.models import Image
 from wagtail.models import Page
 
+from guides import changes
 from guides.audience import summary
 from guides.cleanup import storage_report
 from guides.departments import department_collection
@@ -158,6 +159,7 @@ def edit(request, pk=None):
                     title=data["title"], summary=data["summary"], kind=data["kind"],
                     is_pinned=is_pinned, pinned_until=pinned_until, body=data["body"], audience=data["audience"],
                     needs_ack=data["needs_ack"], publish=request.POST.get("action") != "draft",
+                    change=form.change() if page is not None and page.first_published_at else None,
                 )
             except EditorError as error:
                 form.add_error("body", str(error))  # shown in the content part
@@ -166,21 +168,25 @@ def edit(request, pk=None):
             else:
                 # the browser's autosaved copy (editor.js) is not needed any more: infohub.js drops it
                 request.session[AUTOSAVE_SAVED] = _autosave_key(request, page)
+                important = not first_publish and form.change() is not None  # ignored on a first publish
                 if saved.is_draft or saved.has_unpublished_changes and saved.live:
                     messages.success(request, format_html(
-                        "Черновата на „{}“ е запазена. Обектите {}. <a href=\"{}\" target=\"_blank\">Преглед ↗</a>",
+                        "Черновата на „{}“ е запазена. Обектите {}.{} <a href=\"{}\" target=\"_blank\">Преглед ↗</a>",
                         saved.draft_title,
                         "още не я виждат" if saved.is_draft else "виждат публикуваната версия, докато не натиснете „Публикувай“",
+                        " Важната промяна ще им се покаже при публикуване." if important else "",
                         reverse("dashboard:preview", args=[saved.pk]),
                     ))
                     return redirect("dashboard:update", saved.pk)
                 if saved.live:
                     messages.success(request, format_html(
-                        "{}: <a href=\"{}\">{}</a>. Вижда се от: {}.",
+                        "{}: <a href=\"{}\">{}</a>. Вижда се от: {}.{}",
                         "Публикувано" if first_publish else "Запазено", saved.url, saved.title, summary(GuidePage.objects.get(pk=saved.pk)),
+                        " Показва се отново на обектите като „Обновено“." if important else "",
                     ))
                 else:
-                    messages.success(request, f"„{saved.title}“ е запазена. Тя е архивирана и не се вижда на сайта.")
+                    waits = " Важната промяна ще се покаже на обектите, когато я върнете на сайта." if important else ""
+                    messages.success(request, f"„{saved.title}“ е запазена. Тя е архивирана и не се вижда на сайта.{waits}")
                 return redirect("dashboard:index")
     elif latest is not None:
         shown = revision.as_object() if revision else latest
@@ -196,6 +202,9 @@ def edit(request, pk=None):
             "staff_venues": venues if shown.audience == AUDIENCE_STAFF else [],
             "manager_venues": venues if shown.audience == AUDIENCE_MANAGERS else [],
             "needs_ack": shown.needs_ack,
+            # an important change saved with a draft (or on an archived post) still waits: keep it ticked
+            **({"important": True, "change_note": waiting.note, "reconfirm": waiting.reconfirm}
+               if (waiting := changes.pending(page)) else {}),
         })
         blocks = to_editor(shown.body)
     else:
@@ -208,6 +217,9 @@ def edit(request, pk=None):
         "conflict": conflict,
         "base_revision": base_revision,  # after a conflict: the newer version, so saving again replaces it
         "guide": latest,
+        # „Важна промяна“: only for a post published before (a first publish is new anyway)
+        "offer_change": page is not None and page.first_published_at is not None,
+        "change_waits": page is not None and changes.pending(page) is not None,
         "has_draft": page is not None and (page.is_draft or page.live and page.has_unpublished_changes),
         "restoring": revision,
         "missing_media": _missing_media(revision) if revision else 0,
@@ -273,6 +285,7 @@ def reads(request, pk):
     context.update({
         "guide": page,
         "audience": summary(page),
+        "change": page.changes.filter(pending=False).first(),  # the latest important change
         "rows": rows,
         "opened": sum(1 for _, seen, _ in rows if seen),
         "confirmed": len(confirmed),

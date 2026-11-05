@@ -44,6 +44,13 @@ a body of blocks: subheading, text, numbered steps (each with any number of pict
 video, note (info / tip / warning) and file. In the code a section is a *department*
 (`DepartmentPage`); the UI calls it „Раздел“.
 
+The home page's section cards list the section's categories in their tree order (↑ ↓ in
+Категории), only those with posts the viewer may see, plus „Други“ for posts directly in the
+section (`DepartmentPage.category_links`). **GuideChange** (`guides/changes.py`) marks an edit as
+important: it brings the post back into „Нови за вас“ for UNREAD_DAYS, and with `reconfirm` the
+earlier „Прочетох“ stop counting (`stats.reading.COUNTS`). It lives outside the page, so
+publishing an older revision can't bring one back or drop it.
+
 ## Project layout
 
 | Path | What it is |

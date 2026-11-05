@@ -116,14 +116,16 @@ def update_department(department, *, title, description, color, icon, contact=No
     return page
 
 
-def move_department(department, direction, user=None):
-    """Swap with the department above ("up") or below ("down"). The menu, the home page and the
-    panel list departments in this order. At either end nothing changes; returns whether it moved."""
-    siblings = list(DepartmentPage.objects.sibling_of(department).order_by("path"))
-    index = siblings.index(department) + (-1 if direction == "up" else 1)
+def move_in_order(page, direction, user=None):
+    """Swap a department or a category with the one of its kind above ("up") or below ("down").
+    The menu, the home page and the panel list departments in this order; a department's
+    categories too (on its home page card and its page). At either end nothing changes; returns
+    whether it moved."""
+    siblings = list(type(page).objects.sibling_of(page).order_by("path"))
+    index = siblings.index(page) + (-1 if direction == "up" else 1)
     if not 0 <= index < len(siblings):
         return False
-    department.move(siblings[index], pos="left" if direction == "up" else "right", user=user)
+    page.move(siblings[index], pos="left" if direction == "up" else "right", user=user)
     return True
 
 

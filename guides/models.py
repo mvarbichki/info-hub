@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.paginator import Paginator
 from django.db import models
 from django.utils import timezone
@@ -74,6 +75,21 @@ class DepartmentPage(Page):
         verbose_name = "Раздел"
         verbose_name_plural = "Раздели"
 
+    def category_links(self, visible):
+        """The categories (in their order, Категории ↑ ↓) with posts among `visible` (what the user
+        may see), each with .guide_count, plus „Други“ for the posts directly in the department when
+        there are categories too. A category with nothing for the user is left out: it would only
+        open an empty page (and a category of managers-only posts never shows on staff PCs)."""
+        links = []
+        for category in CategoryPage.objects.live().child_of(self):
+            category.guide_count = visible.child_of(category).count()
+            if category.guide_count:
+                links.append(category)
+        others = visible.child_of(self).count()
+        if links and others:
+            links.append(OtherPosts(self, others))
+        return links
+
     def get_context(self, request, *args, **kwargs):
         from .audience import visible_guides
 
@@ -81,21 +97,36 @@ class DepartmentPage(Page):
         visible = visible_guides(request.user)
         guides = visible.descendant_of(self)
 
+        # „Други“: only the posts directly in the department (not in a category)
+        others = request.GET.get("other") == "1"
+        if others:
+            guides = visible.child_of(self)
         kind = request.GET.get("type")
         if kind in dict(KIND_CHOICES):
             guides = guides.filter(kind=kind)
         else:
             kind = ""
 
-        categories = list(CategoryPage.objects.live().child_of(self))
-        for category in categories:
-            category.guide_count = visible.child_of(category).count()
-
-        context["categories"] = categories
+        context["categories"] = self.category_links(visible)
+        context["others"] = others
         context["kinds"] = KIND_CHOICES
         context["active_kind"] = kind
+        context["filter_query"] = "&".join(p for p in ("other=1" if others else "", f"type={kind}" if kind else "") if p)
         context["guides"] = paginate(request, guides.order_by("-last_published_at"))
         return context
+
+
+class OtherPosts:
+    """„Други“ next to the categories: the department's posts that are in no category."""
+
+    title = "Други"
+
+    def __init__(self, department, guide_count):
+        self.department, self.guide_count = department, guide_count
+
+    @property
+    def url(self):
+        return f"{self.department.url}?other=1"
 
 
 class DepartmentMedia(models.Model):
@@ -294,3 +325,25 @@ class GuidePage(Page):
                 context["confirms"] = True
                 context["my_ack"] = venue_ack(self, request.user)
         return context
+
+
+class GuideChange(models.Model):
+    """An important change of a published post („Важна промяна“ in the editor, guides/changes.py):
+    every venue account that may see the post finds it again in „Нови за вас“ as „Обновено“ until it
+    opens it, and with `reconfirm` the managers' earlier „Прочетох“ no longer counts.
+
+    Kept outside the page so publishing an older revision can't bring back or drop it. Saved with a
+    draft or on an archived post it waits (`pending`) and takes effect when the post is published."""
+
+    guide = models.ForeignKey(GuidePage, on_delete=models.CASCADE, related_name="changes")
+    revision = models.ForeignKey("wagtailcore.Revision", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    note = models.CharField("Какво е променено", max_length=200, blank=True)
+    reconfirm = models.BooleanField("Ново потвърждение", default=False)
+    pending = models.BooleanField(default=False)
+    # When it took effect (published); for a pending one, when it was saved.
+    at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        verbose_name = "Важна промяна"
+        ordering = ["-at"]

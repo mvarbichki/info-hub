@@ -17,7 +17,7 @@
     <h2 class="section__title">Категории</h2>
     <div class="category-list">
         {% for category in categories %}
-        <a class="category-chip" href="{% pageurl category %}">{{ category.title }} <span>{{ category.guide_count }}</span></a>
+        <a class="category-chip{% if others and not category.pk %} is-active{% endif %}" href="{{ category.url }}">{{ category.title }} <span>{{ category.guide_count }}</span></a>
         {% endfor %}
     </div>
 </section>
@@ -25,11 +25,11 @@
 
 <section class="section">
     <div class="section__head">
-        <h2 class="section__title">Публикации</h2>
+        <h2 class="section__title">{% if others %}Други публикации <a class="small" href="{% pageurl page %}">(всички)</a>{% else %}Публикации{% endif %}</h2>
         <nav class="filter-tabs" aria-label="Вид">
-            <a href="{% pageurl page %}" class="{% if not active_kind %}is-active{% endif %}">Всички</a>
+            <a href="{% pageurl page %}{% if others %}?other=1{% endif %}" class="{% if not active_kind %}is-active{% endif %}">Всички</a>
             {% for value, label in kinds %}
-            <a href="?type={{ value }}" class="{% if active_kind == value %}is-active{% endif %}">{{ label }}</a>
+            <a href="?{% if others %}other=1&amp;{% endif %}type={{ value }}" class="{% if active_kind == value %}is-active{% endif %}">{{ label }}</a>
             {% endfor %}
         </nav>
     </div>
@@ -37,7 +37,7 @@
     <div class="card-grid">
         {% for guide in guides %}{% include "includes/guide_card.html" %}{% endfor %}
     </div>
-    {% include "includes/pagination.html" with items=guides extra="type="|add:active_kind %}
+    {% include "includes/pagination.html" with items=guides extra=filter_query %}
     {% else %}
     <p class="muted">Няма публикации.</p>
     {% endif %}

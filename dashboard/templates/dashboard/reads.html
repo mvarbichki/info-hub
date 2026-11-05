@@ -17,8 +17,8 @@
     </div>
     <p>Вижда се от: <b>{{ audience }}</b>{% if not guide.live %} <span class="status status--hidden">Архивирана: сега не се вижда</span>{% endif %}</p>
     <p class="reads-totals">
-        Отворили: <b>{{ opened }} / {{ rows|length }}</b> потребителя
-        {% if guide.needs_ack %} · Потвърдили „{{ guide.ack_label }}“: <b>{{ confirmed }} / {{ expected }}</b> обекта{% endif %}
+        Отворили{% if change %} след важната промяна ({{ change.at|date:"j.m.Y H:i" }}){% endif %}: <b>{{ opened }} / {{ rows|length }}</b> потребителя
+        {% if guide.needs_ack %} · Потвърдили „{{ guide.ack_label }}“{% if change.reconfirm %} новата версия{% endif %}: <b>{{ confirmed }} / {{ expected }}</b> обекта{% endif %}
     </p>
     {% if guide.needs_ack %}
     {% if missing %}<p class="flash flash--warning">Още не са потвърдили: {{ missing|join:", " }}.</p>
@@ -35,8 +35,8 @@
         <tr>
             <td>{{ account.venue.name }}</td>
             <td>{{ account.user.username }} <span class="muted small">({% if account.role == "manager" %}управител{% else %}служители{% endif %})</span></td>
-            <td class="nowrap">{% if seen %}{{ seen|date:"j.m.Y H:i" }}{% else %}<span class="muted">не</span>{% endif %}</td>
-            {% if guide.needs_ack %}<td class="nowrap">{% if account.role != "manager" %}<span class="muted">потвърждава управителят</span>{% elif acked %}<span class="status status--live">✓ {{ acked|date:"j.m.Y H:i" }}</span>{% else %}<span class="status status--pending">не е потвърдено</span>{% endif %}</td>{% endif %}
+            <td class="nowrap">{% if seen %}{{ seen|date:"j.m.Y H:i" }}{% elif account.seen_before %}<span class="muted">не след промяната (по-рано: {{ account.seen_before|date:"j.m.Y H:i" }})</span>{% else %}<span class="muted">не</span>{% endif %}</td>
+            {% if guide.needs_ack %}<td class="nowrap">{% if account.role != "manager" %}<span class="muted">потвърждава управителят</span>{% elif acked %}<span class="status status--live">✓ {{ acked|date:"j.m.Y H:i" }}</span>{% else %}<span class="status status--pending">не е потвърдено</span>{% if account.acked_before %} <span class="muted small">(по-рано: {{ account.acked_before|date:"j.m.Y H:i" }})</span>{% endif %}{% endif %}</td>{% endif %}
         </tr>
         {% endfor %}
         </tbody>

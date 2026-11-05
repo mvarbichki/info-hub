@@ -7,6 +7,7 @@
         {% if show_department %}{% with department=guide.department %}{% if department %}<span class="guide-card__dept dept--{{ department.color }}">{{ department.title }}</span>{% endif %}{% endwith %}{% endif %}
     </div>
     <h3 class="guide-card__title">{{ guide.title }}</h3>
+    {% important_change guide as change %}{% if change.note %}<p class="guide-card__change">Променено: {{ change.note }}</p>{% endif %}
     {% if guide.summary %}<p class="guide-card__summary">{{ guide.summary }}</p>{% endif %}
     <time class="guide-card__date" datetime="{{ guide.last_published_at|date:'c' }}">{{ guide.last_published_at|date:"j E Y" }}</time>
 </a>

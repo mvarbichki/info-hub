@@ -17,7 +17,7 @@ copy with fictional venues and content.
 ## What it does
 
 **For venue staff** (read-only accounts, one per venue and role, logged in on the venue PCs for a year)
-- A home page built around one search box. Search finds Bulgarian word forms (принтер / принтера / принтерът), forgives the wrong keyboard layout, Latin spelling and typos ("ghbynth", "printer", "принетр" → принтер), and suggests what other venues search for most.
+- A home page built around one search box, with each section's categories as the way in. Search finds Bulgarian word forms (принтер / принтера / принтерът), forgives the wrong keyboard layout, Latin spelling and typos ("ghbynth", "printer", "принетр" → принтер), and suggests what other venues search for most.
 - **„Нови за вас“ (New for you):** every new post waits on the venue's home page until someone there opens it; important ones stay with the venue's manager until they confirm **„Прочетох и запознах екипа“ (read it and briefed the team)**, or just „Прочетох“ for a managers-only post: the staff account is shared by the venue, so the manager answers for it.
 - Step-by-step guides with screenshots, videos and downloadable forms (PDF, Word, Excel and PowerPoint also shown inside the page, the Office files through a PDF copy made by LibreOffice); a print view; „Did this help? Yes / No“ feedback, where "No" asks what was missing and shows whom to contact.
 - Venue managers additionally see posts meant only for managers. Nothing else is visible: a post or file outside a user's audience simply does not exist for them (404).
@@ -26,6 +26,7 @@ copy with fictional venues and content.
 - A block editor in the browser: numbered steps with several pictures and files each, text, subheadings, images, videos, notes and files. Screenshots can be pasted straight from the clipboard (Ctrl+V) or dragged in; every file uploads on its own with a progress bar.
 - **Who sees it:** all venues, the staff of chosen venues (their managers included), or only the managers of chosen venues, picked in one table with a live summary.
 - A gold bar with two tabs, **„Сайт | Управление“**, always shows editors whether they are looking at the site or at the publishing panel; the panel has its own header.
+- **Important change:** an edit can be marked important, so the post returns to every venue's „Нови за вас“ as „Обновено“ with a one-line note of what changed, optionally asking the managers to confirm again; a typo fix stays quiet.
 - Drafts with a preview, an autosaved copy in the browser offered back after a crash, **„Виж като обект“** (the site exactly as a chosen venue account sees it, under a red bar, recording nothing), archive instead of delete, and **„Прочитания“**: which venue has opened and confirmed a post, and who has not yet.
 - **History** of every post: who saved, published, archived or deleted what, and any earlier version can be previewed and brought back.
 - Statistics per venue: views, helpful / not helpful with the staff's reasons, searches with no result (= what is missing), and venues that do not use the site.
@@ -67,8 +68,8 @@ copy with fictional venues and content.
 python manage.py test
 ```
 
-- **298 tests** on a separate test database: access per role, visibility per venue and role (also through „Виж като обект“), the editor and uploads, every error message, the panel, settings, the security policy, moving a site, and edge cases such as hostile input, open redirects, odd search input and unknown ids.
-- **171 browser checks** of the JavaScript (editor and its autosave, audience picker, user form, login page, site scripts) in jsdom on freshly rendered pages, run from the same command.
+- **322 tests** on a separate test database: access per role, visibility per venue and role (also through „Виж като обект“), the editor and uploads, every error message, the panel, settings, the security policy, moving a site, and edge cases such as hostile input, open redirects, odd search input and unknown ids.
+- **178 browser checks** of the JavaScript (editor and its autosave, audience picker, user form, login page, site scripts) in jsdom on freshly rendered pages, run from the same command.
 - **99 % line coverage**; `pyflakes` and dead-code scans clean; no known vulnerabilities in the dependencies; a read-only `check_site` command audits a live database (integrity, files on disk, and every venue account × post against an independent copy of the rule).
 - Every release is also clicked through in a real browser (Playwright + Edge) on a copy of the data: about 90 pages per role with no script errors or policy blocks.
 

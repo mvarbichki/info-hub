@@ -133,6 +133,10 @@ h1, h2, h3 { line-height: 1.25; }
 .dept-card__head:hover span { text-decoration: underline; }
 .dept-card ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
 .dept-card p { margin: 0; }
+.dept-card__categories li { display: flex; justify-content: space-between; gap: 8px; }
+.dept-card__categories span { color: var(--muted); font-size: 14px; }
+.dept-card__more { color: var(--dept); font-size: 14px; text-decoration: none; }
+.dept-card__more:hover { text-decoration: underline; }
 .dept-card__all { margin-top: auto; color: var(--dept); font-size: 14px; font-weight: 600; text-decoration: none; }
 .dept-card__all:hover { text-decoration: underline; }
 
@@ -164,6 +168,8 @@ h1, h2, h3 { line-height: 1.25; }
 .badge--new { background: #1d7a46; color: #fff; }
 .badge--updated { background: #e5f4ec; color: #1d7a46; }
 .badge--ack { background: #b3261e; color: #fff; }
+.guide-card__change { margin: 0; font-size: 14px; font-weight: 600; color: #8a5a00; }
+.change-box { margin: 12px 0 0; padding: 10px 14px; background: #fdf3e1; border-left: 4px solid #d97706; border-radius: 6px; }
 
 /* Department / category page */
 .breadcrumbs { display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px; color: var(--muted); margin-bottom: 16px; }
@@ -174,7 +180,7 @@ h1, h2, h3 { line-height: 1.25; }
 
 .category-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .category-chip { display: inline-flex; gap: 8px; align-items: center; padding: 8px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; text-decoration: none; color: var(--text); font-weight: 600; }
-.category-chip:hover { border-color: var(--primary); }
+.category-chip:hover, .category-chip.is-active { border-color: var(--primary); }
 .category-chip span { color: var(--muted); font-weight: 400; font-size: 14px; }
 
 .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -542,6 +548,8 @@ a.button-primary { display: inline-block; text-decoration: none; padding: 10px 2
 .audience-table input:disabled { opacity: .45; }
 .audience__summary { margin: 12px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--primary-soft); font-weight: 600; }
 .audience__summary:empty { display: none; }
+.change__more { margin: 12px 0 0 28px; display: flex; flex-direction: column; gap: 10px; }
+.change__more input[type=text] { width: 100%; max-width: 560px; }
 .audience__ack { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border, #e3dde8); }
 .panel__links { display: inline-flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .audience__summary.is-empty { background: #fdf3e1; color: #9a5300; }

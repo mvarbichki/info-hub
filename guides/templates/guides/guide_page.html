@@ -16,6 +16,9 @@
         {% if page.last_published_at %}
         <p class="guide__date">Последна промяна: <time datetime="{{ page.last_published_at|date:'c' }}">{{ page.last_published_at|date:"j E Y, H:i" }}</time></p>
         {% endif %}
+        {% important_change page as change %}{% if change %}
+        <p class="change-box"><b>Важна промяна</b> ({{ change.at|date:"j E Y" }}){% if change.note %}: {{ change.note }}{% else %}: публикацията е обновена.{% endif %}</p>
+        {% endif %}
         {% if request.is_preview %}<p class="flash flash--warning">Преглед: така ще изглежда публикацията. Обектите още не виждат тези промени.</p>{% endif %}
         {% if confirms and not my_ack %}<p class="ack-hint">Прочетете публикацията{% if page.ack_briefs_team %}, запознайте екипа{% endif %} и потвърдете с бутона <b>„{{ page.ack_label }}“</b> най-долу.</p>{% endif %}
     </header>

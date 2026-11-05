@@ -44,6 +44,11 @@ def history(request, pk):
         if revision.pk not in shown:
             rows.append({"when": revision.created_at, "who": _who(revision.user, revision.user_id), "what": ACTIONS["wagtail.edit"], "revision": revision})
     rows.sort(key=lambda row: row["when"], reverse=True)
+    # „Важна промяна“ next to the version it was saved with (the first row of that version)
+    marked = {change.revision_id: change for change in page.changes.filter(revision__isnull=False)}
+    for row in rows:
+        if row["revision"]:
+            row["change"] = marked.pop(row["revision"].pk, None)
     context = head_context(request)
     context.update({
         "guide": page,

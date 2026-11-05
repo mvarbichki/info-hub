@@ -63,7 +63,10 @@
             <a class="dept-card__head" href="{% pageurl department %}">
                 {% include "includes/icon.html" with name=department.icon %}<span>{{ department.title }}</span>
             </a>
-            {% if department.highlights %}
+            {% if department.links %}
+            <ul class="dept-card__categories">{% for link in department.links %}<li><a href="{{ link.url }}">{{ link.title }}</a> <span>{{ link.guide_count }}</span></li>{% endfor %}</ul>
+            {% if department.more_links %}<a class="dept-card__more" href="{% pageurl department %}">Още {{ department.more_links }} →</a>{% endif %}
+            {% elif department.highlights %}
             <ul>{% for guide in department.highlights %}<li><a href="{% pageurl guide %}">{{ guide.title }}</a></li>{% endfor %}</ul>
             {% elif department.description %}
             <p class="muted small">{{ department.description }}</p>

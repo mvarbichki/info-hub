@@ -30,10 +30,16 @@
     {% if items %}
     <div class="table-wrap">
     <table class="guide-table">
-        <thead><tr><th>Име</th><th>Публикации</th><th>Статус</th><th></th></tr></thead>
+        <thead><tr><th>Ред</th><th>Име</th><th>Публикации</th><th>Статус</th><th></th></tr></thead>
         <tbody>
         {% for category in items %}
         <tr class="{% if not category.live %}is-hidden{% endif %}">
+            <td class="nowrap">
+                <form method="post" action="{% url 'dashboard:move_category' category.pk %}" class="order-buttons">{% csrf_token %}
+                    <button type="submit" name="direction" value="up" class="link-button" title="Нагоре" aria-label="{{ category.title }} нагоре"{% if forloop.first %} disabled{% endif %}>↑</button>
+                    <button type="submit" name="direction" value="down" class="link-button" title="Надолу" aria-label="{{ category.title }} надолу"{% if forloop.last %} disabled{% endif %}>↓</button>
+                </form>
+            </td>
             <td>
                 <form method="post" action="{% url 'dashboard:rename_category' category.pk %}" class="rename-form">
                     {% csrf_token %}
@@ -57,6 +63,7 @@
         </tbody>
     </table>
     </div>
+    <p class="muted small">В този ред (↑ ↓) категориите се показват на сайта: в карето на раздела на началната страница и в страницата на раздела. Категория без публикации за даден обект не се показва там.</p>
     <p class="muted small">Категория с публикации не може да се изтрие. Първо ги преместете (Редактирай → „Къде да се публикува“) или ги изтрийте.</p>
     {% else %}
     <p class="muted">Няма категории. Публикациите се показват направо в раздела.</p>

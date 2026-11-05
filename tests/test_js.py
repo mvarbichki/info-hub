@@ -1,5 +1,5 @@
 """The site's JavaScript in jsdom: the post editor, the „Кой да я вижда“ picker, the „Нов потребител“
-form, a PDF shown inside a post and the login page. The pages are rendered here from the test database, then tests/js/*.test.js runs on them.
+form, a PDF shown inside a post, the login page and the editor's „Важна промяна“. The pages are rendered here from the test database, then tests/js/*.test.js runs on them.
 
 Needs Node.js and, once, `npm install` in tests/js (skipped otherwise)."""
 
@@ -85,6 +85,16 @@ class BrowserScriptTests(InfoHubTestCase):
         self.save("users_new.html", client.get(f"/manage/users/?new_role=staff&new_venue={self.pernik.pk}"))
         self.save("users_error.html", client.post("/manage/users/", {"role": "editor", "username": "", "department": "", "password": "", "venue": ""}))
         print("\n  users.test.js:", self.run_node("users.test.js"))
+
+    def test_important_change_box(self):
+        editor = self.client_for(self.marketing_editor)
+        _, guide = self.save_post(editor, title="Работно време")
+        self.save("change.html", editor.get(f"/manage/{guide.pk}/"))
+        base = GuidePage.objects.get(pk=guide.pk).latest_revision_id
+        self.save_post(editor, url=f"/manage/{guide.pk}/", title="Работно време", base_revision=base,
+                       important="on", change_note="Чака", action="draft")
+        self.save("change_waiting.html", editor.get(f"/manage/{guide.pk}/"))
+        print("\n  change.test.js:", self.run_node("change.test.js"))
 
     def test_login_page(self):
         from django.test import Client

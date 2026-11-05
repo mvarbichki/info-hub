@@ -124,6 +124,21 @@
         <label class="checkbox audience__ack"><input type="checkbox" name="needs_ack"{% if form.needs_ack.value %} checked{% endif %}> <span><b>Искай „Прочетох“ от управителите</b> – управителят на всеки обект потвърждава с бутон „Прочетох и запознах екипа“, а при „Само управителят“ – с „Прочетох“ (за правила, срокове, важни промени). Служителите виждат публикацията както обикновено. Кой е потвърдил: „Прочитания“ в списъка.</span></label>
     </section>
 
+    {% if offer_change %}
+    <section class="panel change" data-change>
+        <h2>Промяна</h2>
+        <label class="checkbox"><input type="checkbox" name="important" data-important{% if form.important.value %} checked{% endif %}> <span><b>Важна промяна – покажи я отново на обектите</b> – публикацията се връща в „Нови за вас“ с етикет „Обновено“ на всеки обект, който я вижда, докато не я отвори отново. За дребни поправки (правопис, снимка) не отбелязвайте.</span></label>
+        <div class="change__more" data-important-more>
+            <label class="field">Какво е променено <span class="muted small">(по желание, показва се в жълто най-горе в публикацията)</span>
+                <input type="text" name="change_note" maxlength="200" value="{{ form.change_note.value|default:'' }}" placeholder="напр. Нов телефон за поддръжка">
+            </label>
+            {% for error in form.change_note.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            <label class="checkbox" data-reconfirm><input type="checkbox" name="reconfirm"{% if form.reconfirm.value %} checked{% endif %}> <span><b>Искай ново потвърждение „Прочетох“</b> – досегашните потвърждения на управителите не се броят за новата версия (остават видими в „Прочитания“).</span></label>
+        </div>
+        {% if change_waits %}<p class="muted small">Важната промяна е отбелязана и ще се покаже на обектите{% if guide.live %} при публикуване{% else %}, когато публикацията се върне на сайта{% endif %}. Махнете отметката, ако вече не е нужна.</p>{% endif %}
+    </section>
+    {% endif %}
+
     <div class="form-actions form-actions--sticky">
         {% if guide and not guide.live and not guide.is_draft %}
         <button type="submit" class="button-primary" name="action" value="publish" data-submit>Запази</button>
@@ -142,4 +157,5 @@
 <script src="{% static 'vendor/quill/quill.js' %}"></script>
 <script src="{% static 'js/editor.js' %}"></script>
 <script src="{% static 'js/audience.js' %}"></script>
+<script src="{% static 'js/change.js' %}"></script>
 {% endblock %}

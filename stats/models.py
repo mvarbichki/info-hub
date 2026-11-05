@@ -50,8 +50,9 @@ class Vote(models.Model):
 
 
 class Seen(models.Model):
-    """When a venue account first opened a post: it is „Ново“ for that account until then, and
-    the editors see which venues opened it. Kept as long as the post and the account exist."""
+    """When a venue account opened a post (its current version: moved on when the account opens it
+    again after an important change, guides/changes.py). It is „Ново“ / „Обновено“ for that account
+    until then, and the editors see which venues opened it. Kept as long as the post and the account exist."""
 
     guide = models.ForeignKey("guides.GuidePage", on_delete=models.CASCADE, related_name="+")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
@@ -68,7 +69,8 @@ class Ack(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
     at = models.DateTimeField(auto_now_add=True)
     # Given as „Прочетох и запознах екипа“ (True) or, on a managers-only post, just „Прочетох“ (False).
-    # A plain „Прочетох“ doesn't count once the post is widened to the staff (stats.reading.COUNTS).
+    # A plain „Прочетох“ doesn't count once the post is widened to the staff, nor any given before the
+    # post asked for a new confirmation (stats.reading.COUNTS).
     team = models.BooleanField(default=True)
 
     class Meta:

@@ -7,6 +7,7 @@ from django.db.models import Q
 from wagtail.documents.models import Document
 from wagtail.images.models import Image
 
+from . import changes
 from .audience import EVERYBODY
 from .departments import department_collection
 from .editor import media_ids, parse, to_body
@@ -66,13 +67,17 @@ def _store_listing(page):
 
 
 def save_guide(*, user, page=None, parent, title, summary, kind, is_pinned, pinned_until, body,
-               audience=EVERYBODY, needs_ack=False, publish=True):
+               audience=EVERYBODY, needs_ack=False, publish=True, change=None):
     """Create a new guide (page=None) or change an existing one. `body` is the editor's JSON,
     `audience` = guides.audience.normalize(...) (default: everybody).
 
     publish=False saves a draft: a new post stays off the site, a live one keeps showing its
     published version until the draft is published. An archived post is never published here
     (it stays archived; „Върни на сайта“ in the list).
+
+    change = (note, reconfirm) marks the edit of a post published before as „Важна промяна“
+    (guides/changes.py): now if this save publishes it, else when it is published. None = a plain
+    edit (a change still waiting from an earlier save is dropped).
 
     Raises EditorError or InactiveLimitReached. Returns the page as stored.
     """
@@ -128,11 +133,18 @@ def save_guide(*, user, page=None, parent, title, summary, kind, is_pinned, pinn
         page.audience, page.venues = audience
         page.needs_ack = needs_ack
 
+        published_before = page.first_published_at is not None
         revision = page.save_revision(user=user, log_action=True)
-        if publish and (page.live or page.is_draft):
+        went_live = publish and (page.live or page.is_draft)
+        if went_live:
             revision.publish(user=user)
         elif not page.live:
             _store_listing(page)  # a live post's row keeps its published version until publishing
+        if change is not None and published_before:  # a first publish is new anyway
+            note, reconfirm = change
+            changes.record(page, user=user, revision=revision, note=note, reconfirm=reconfirm and needs_ack, published=went_live)
+        else:
+            changes.drop_pending(page)
 
     # Media the post no longer uses stay for its older versions (see _media_of).
     return GuidePage.objects.get(pk=page.pk)  # as stored now (live, first published, …)
@@ -145,6 +157,7 @@ def set_visible(page, visible, user):
         check_inactive_room(page.specific.department, page.title)
     if visible and not page.live:  # also publishes a draft
         (page.get_latest_revision() or page.save_revision(user=user)).publish(user=user)
+        changes.take_effect(page)  # „Важна промяна“ saved with it counts from now
     elif not visible and page.live:
         page.unpublish(user=user)
 

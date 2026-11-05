@@ -7,7 +7,7 @@ from django.utils.html import format_html
 from django.views.decorators.http import require_POST
 
 from guides.departments import (
-    DepartmentError, create_department, delete_department, department_group, move_department, update_department,
+    DepartmentError, create_department, delete_department, department_group, move_in_order, update_department,
 )
 from guides.models import CategoryPage, DepartmentPage, GuidePage
 from guides.publishing import inactive_count
@@ -70,7 +70,7 @@ def edit_department(request, pk):
 def reorder_department(request, pk):
     department = get_object_or_404(DepartmentPage, pk=pk)
     if request.POST.get("direction") in ("up", "down"):
-        move_department(department, request.POST["direction"], user=request.user)
+        move_in_order(department, request.POST["direction"], user=request.user)
     return redirect("dashboard:departments")
 
 
