@@ -25,12 +25,13 @@ copy with fictional venues and content.
 **For the departments** (editors of IT, the casino management system, Marketing, HR)
 - A block editor in the browser: numbered steps with several pictures and files each, text, subheadings, images, videos, notes and files. Screenshots can be pasted straight from the clipboard (Ctrl+V) or dragged in; every file uploads on its own with a progress bar.
 - **Who sees it:** all venues, the staff of chosen venues (their managers included), or only the managers of chosen venues, picked in one table with a live summary.
-- Drafts with a preview, an autosaved copy in the browser offered back after a crash, **„Виж като обект“** (the site exactly as a chosen venue account sees it, recording nothing), archive instead of delete, and **„Прочитания“**: which venue has opened and confirmed a post, and who has not yet.
+- A gold bar with two tabs, **„Сайт | Управление“**, always shows editors whether they are looking at the site or at the publishing panel; the panel has its own header.
+- Drafts with a preview, an autosaved copy in the browser offered back after a crash, **„Виж като обект“** (the site exactly as a chosen venue account sees it, under a red bar, recording nothing), archive instead of delete, and **„Прочитания“**: which venue has opened and confirmed a post, and who has not yet.
 - **History** of every post: who saved, published, archived or deleted what, and any earlier version can be previewed and brought back.
 - Statistics per venue: views, helpful / not helpful with the staff's reasons, searches with no result (= what is missing), and venues that do not use the site.
 
 **For the administrator**
-- Sections (departments), venues and every account in one panel; ↑ ↓ ordering of the sections.
+- Sections (departments), venues, every account and the site settings (name, logo, footer) in one panel; ↑ ↓ ordering of the sections.
 - A printable sheet with new random passwords for every venue (one venue per page).
 - Stopping a venue logs out all its PCs at once; nightly cleanup of unused uploads and old data.
 
@@ -42,6 +43,10 @@ copy with fictional venues and content.
 | **The publishing panel** | **Statistics per venue** |
 | ![List of posts with audience, status and read counts](docs/screenshots/posts.png) | ![Searches without result, usage per venue, most read posts](docs/screenshots/stats.png) |
 
+**„Виж като обект“:** an editor sees a post exactly as one venue's manager does; nothing is recorded and every button is off.
+
+![The site seen as a chosen venue account, under a red bar](docs/screenshots/viewas.png)
+
 <p align="center"><img src="docs/screenshots/mobile.png" width="520" alt="Home page and a guide on a phone"></p>
 
 ## Engineering highlights
@@ -49,6 +54,7 @@ copy with fictional venues and content.
 - **One visibility rule for everything.** `guides/audience.py` builds the queryset filter for a venue and role; lists, search, guide pages, feedback, statistics, „frequent searches“ and **media files** all use it, so a manager-only post can't leak through a side door. The audience is stored as one mode plus a venue list, which makes invalid mixes impossible in the data, not only in the UI.
 - **Protected media.** Every picture, video and document is served only after a login and audience check, with HTTP range requests for video seeking; behind nginx the file transfer is handed off via `X-Accel-Redirect`.
 - **Safe rich text.** The editor's HTML goes through Wagtail's own whitelist converter before it is stored as StreamField blocks; hostile input (`<script>`, `onerror`, `javascript:` links) is covered by tests on every page that shows it.
+- **Viewing as a venue without its password.** A middleware swaps in the chosen venue account for site pages only, so every list, search, label and file goes through the same visibility rule; anything that would write (views, votes, read receipts, any POST) is refused while looking, and the panel, previews and file thumbnails keep the editor's own rights. The whole visibility test suite is run a second time through this path.
 - **Security hardening.** Login required everywhere (`LoginRequiredMiddleware`), a login throttle that counts the real visitor address behind the proxy, read-only accounts that cannot change or reset passwords, no public admin login (Wagtail's admin closed, one back office), a Content-Security-Policy that runs only the site's own scripts, safe redirects, `noindex`, pages not kept by the browser after logout, forms sent only once, a button pressed after the session ended returns to its page after login, secure cookies and HSTS in production, dependencies checked with `pip-audit`.
 - **Bulgarian-aware search and checks.** SQLite folds the case of Latin letters only, so search uses a stored lower-case text and name checks compare in Python (`casefold`).
 - **Publishing on top of Wagtail revisions.** Drafts, previews and „archive“ are Wagtail revisions and publish states; the panel keeps the list view right for drafts and archived posts.
@@ -61,9 +67,10 @@ copy with fictional venues and content.
 python manage.py test
 ```
 
-- **165 tests** on a separate test database: access per role, visibility per venue and role, the editor and uploads, every error message, the panel, settings, moving a site, and edge cases such as hostile input, open redirects, odd search input and unknown ids.
-- **92 browser checks** of the JavaScript (editor, audience picker, user form) in jsdom on freshly rendered pages, run from the same command.
-- **98 % line coverage**; `pyflakes` and dead-code scans clean; no known vulnerabilities in the dependencies.
+- **298 tests** on a separate test database: access per role, visibility per venue and role (also through „Виж като обект“), the editor and uploads, every error message, the panel, settings, the security policy, moving a site, and edge cases such as hostile input, open redirects, odd search input and unknown ids.
+- **171 browser checks** of the JavaScript (editor and its autosave, audience picker, user form, login page, site scripts) in jsdom on freshly rendered pages, run from the same command.
+- **99 % line coverage**; `pyflakes` and dead-code scans clean; no known vulnerabilities in the dependencies; a read-only `check_site` command audits a live database (integrity, files on disk, and every venue account × post against an independent copy of the rule).
+- Every release is also clicked through in a real browser (Playwright + Edge) on a copy of the data: about 90 pages per role with no script errors or policy blocks.
 
 Details: [tests/README.md](tests/README.md).
 
