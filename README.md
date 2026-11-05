@@ -12,7 +12,7 @@ Docker · nginx · Caddy (Let's Encrypt)
 The interface is in Bulgarian, as it is for the people who use it. The screenshots show a demo
 copy with fictional venues and content.
 
-![Home page of a venue: search, frequent searches, „New for you“ with read-confirmation labels](docs/screenshots/home.png)
+![Home page of a venue: search, frequent searches, „New for you“ with an updated post and its change note, sections with their categories](docs/screenshots/home.png)
 
 ## What it does
 
